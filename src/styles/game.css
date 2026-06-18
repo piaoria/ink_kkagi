@@ -75,6 +75,60 @@
   box-shadow: var(--panel-shadow);
 }
 
+.piece-progress,
+.tool-mode-group,
+.pieces-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.piece-marker,
+.tool-mode-button,
+.piece-chip {
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 3px solid var(--ink-black);
+  background: #eef2f2;
+  color: var(--ink-black);
+}
+
+.piece-marker {
+  display: inline-grid;
+  min-width: 34px;
+  place-items: center;
+  padding: 0;
+}
+
+.piece-marker.is-current {
+  background: var(--paper-hot);
+}
+
+.piece-marker.is-complete {
+  background: var(--green-ink);
+  color: #ffffff;
+}
+
+.tool-mode-button {
+  cursor: pointer;
+}
+
+.tool-mode-button.is-active {
+  background: var(--pink-ink);
+  color: #ffffff;
+  box-shadow: 4px 4px 0 var(--ink-black);
+}
+
+.piece-chip {
+  background: var(--blue-ink);
+  color: #ffffff;
+}
+
+.piece-chip.is-empty {
+  background: #eef2f2;
+  color: var(--ink-black);
+}
+
 .panel-label {
   margin: 0;
   padding: 6px 8px;
@@ -92,4 +146,32 @@
   font-weight: 700;
   font-size: 42px;
   line-height: 1;
+}
+
+.validation-message {
+  min-height: 44px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 3px solid var(--ink-black);
+  background: #ffe3dc;
+  color: var(--ink-black);
+  line-height: 1.35;
+}
+
+.validation-message.is-valid {
+  background: #d6ffe9;
+}
+
+.drawing-complete-layout {
+  width: min(1040px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(240px, 1fr));
+  gap: 32px;
+}
+
+@media (max-width: 760px) {
+  .drawing-complete-layout {
+    grid-template-columns: 1fr;
+  }
 }
