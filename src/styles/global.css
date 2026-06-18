@@ -1,9 +1,17 @@
 :root {
-  color: #1d252c;
-  background: #f7f1e3;
+  --ink-black: #12161b;
+  --paper: #f2f4f3;
+  --paper-hot: #fff04a;
+  --grid-line: rgba(18, 22, 27, 0.12);
+  --blue-ink: #0088ff;
+  --orange-ink: #ff6b2b;
+  --green-ink: #00b36f;
+  --pink-ink: #ff3f8f;
+  --panel-shadow: 8px 8px 0 var(--ink-black);
+  color: var(--ink-black);
+  background: var(--paper);
   font-family:
-    Pretendard,
-    Inter,
+    Galmuri11,
     system-ui,
     -apple-system,
     BlinkMacSystemFont,
@@ -28,13 +36,13 @@ body,
 body {
   min-height: 100vh;
   background:
-    linear-gradient(rgba(29, 37, 44, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(29, 37, 44, 0.055) 1px, transparent 1px), #f7f1e3;
-  background-size: 28px 28px;
+    linear-gradient(var(--grid-line) 2px, transparent 2px),
+    linear-gradient(90deg, var(--grid-line) 2px, transparent 2px), var(--paper);
+  background-size: 24px 24px;
+  image-rendering: pixelated;
 }
 
 button {
   border: 0;
   font: inherit;
 }
-

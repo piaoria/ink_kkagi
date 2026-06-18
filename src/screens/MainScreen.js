@@ -14,11 +14,24 @@ export function renderMainScreen({ onStartLocal }) {
   const copy = document.createElement('div');
   copy.className = 'title-copy';
 
+  const logo = renderPixelLogo();
+
   const title = document.createElement('h1');
+  title.className = 'pixel-title';
   title.textContent = GAME_INFO.koreanTitle;
 
   const subtitle = document.createElement('p');
+  subtitle.className = 'title-subtitle';
   subtitle.textContent = GAME_INFO.englishTitle;
+
+  const tags = document.createElement('ul');
+  tags.className = 'concept-tags';
+
+  for (const label of ['픽셀 말 제작', '실제 빈 공간', '물리 튕기기']) {
+    const tag = document.createElement('li');
+    tag.textContent = label;
+    tags.append(tag);
+  }
 
   const actions = document.createElement('div');
   actions.className = 'title-actions';
@@ -34,7 +47,7 @@ export function renderMainScreen({ onStartLocal }) {
   status.textContent = `${DRAWING_CONFIG.PIECES_PER_PLAYER}개 말, ${DRAWING_CONFIG.TOTAL_INK}칸 잉크`;
 
   actions.append(startButton, status);
-  copy.append(title, subtitle, actions);
+  copy.append(logo, title, subtitle, tags, actions);
 
   const preview = renderBoardPreview();
 
@@ -42,6 +55,45 @@ export function renderMainScreen({ onStartLocal }) {
   screen.append(content);
 
   return screen;
+}
+
+function renderPixelLogo() {
+  const logo = document.createElement('div');
+  logo.className = 'pixel-logo';
+  logo.setAttribute('aria-hidden', 'true');
+
+  const blueCells = new Set([
+    '1,1',
+    '2,1',
+    '3,1',
+    '1,2',
+    '1,3',
+    '2,4',
+    '3,4',
+    '4,4',
+  ]);
+  const orangeCells = new Set(['6,2', '7,2', '7,3', '5,5', '6,5', '7,5']);
+  const sparkCells = new Set(['4,1', '5,3', '3,6', '6,6']);
+
+  for (let y = 0; y < 8; y += 1) {
+    for (let x = 0; x < 8; x += 1) {
+      const cell = document.createElement('span');
+      const key = `${x},${y}`;
+      cell.className = 'pixel-logo-cell';
+
+      if (blueCells.has(key)) {
+        cell.classList.add('is-blue');
+      } else if (orangeCells.has(key)) {
+        cell.classList.add('is-orange');
+      } else if (sparkCells.has(key)) {
+        cell.classList.add('is-spark');
+      }
+
+      logo.append(cell);
+    }
+  }
+
+  return logo;
 }
 
 function renderBoardPreview() {

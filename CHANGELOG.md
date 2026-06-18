@@ -9,6 +9,8 @@
 - GitHub Pages용 Vite base 설정 추가
 - 기본 메인 화면 추가
 - 1P 말 제작 화면의 초기 8x8 그리드 추가
+- Galmuri 기반 한글 픽셀 폰트 적용
+- 네모 도트 컨셉의 픽셀 로고와 각진 UI 스타일 추가
 - 게임 상태 머신의 최소 구조 추가
 - 상태 전이 단위 테스트 추가
 - GitHub Pages 배포 workflow 추가

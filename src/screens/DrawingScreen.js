@@ -23,6 +23,7 @@ export function renderDrawingScreen({ ownerId, draftCells, onDraftChange, onBack
   eyebrow.textContent = `PLAYER ${ownerId}`;
 
   const title = document.createElement('h1');
+  title.className = 'pixel-title';
   title.textContent = '말 제작';
 
   titleGroup.append(eyebrow, title);

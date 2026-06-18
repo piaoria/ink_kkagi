@@ -21,6 +21,7 @@
 - HTML, CSS, Vanilla JavaScript
 - Canvas 2D
 - Planck.js
+- Galmuri pixel font
 - Vitest
 - ESLint
 - Prettier
@@ -72,4 +73,3 @@ npm run build
 
 현재 MVP에서는 온라인 대전을 구현하지 않는다. 향후 별도 서버와 WebSocket을
 붙일 수 있도록 JSON 직렬화 가능한 데이터 모델을 유지한다.
-
