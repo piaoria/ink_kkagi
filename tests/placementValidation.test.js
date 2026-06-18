@@ -57,7 +57,7 @@ describe('piece placement rules', () => {
     const result = validatePiecePlacement({
       piece,
       ownerId: 1,
-      anchor: { x: 0, y: 8 },
+      anchor: { x: 0, y: 9 },
       existingPlacements: [],
     });
 
