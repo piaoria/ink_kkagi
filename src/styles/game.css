@@ -1,0 +1,31 @@
+.board-preview {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(22px, 1fr));
+  width: min(100%, 420px);
+  aspect-ratio: 1;
+  padding: 12px;
+  gap: 6px;
+  border: 3px solid #26323b;
+  border-radius: 8px;
+  background: #fffaf0;
+  box-shadow:
+    12px 12px 0 rgba(22, 119, 199, 0.16),
+    -10px -10px 0 rgba(231, 95, 42, 0.14);
+}
+
+.preview-cell {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid rgba(38, 50, 59, 0.14);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.preview-cell.is-inked {
+  border-color: #17212b;
+  background:
+    radial-gradient(circle at 25% 22%, rgba(255, 255, 255, 0.26), transparent 28%),
+    #1677c7;
+  box-shadow: inset -4px -4px 0 rgba(12, 49, 77, 0.22);
+}
+
