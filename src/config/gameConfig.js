@@ -13,8 +13,14 @@ export const DRAWING_CONFIG = Object.freeze({
   CONNECTION_MODE: 'ORTHOGONAL',
 });
 
+export const PLACEMENT_CONFIG = Object.freeze({
+  BOARD_COLUMNS: 12,
+  BOARD_ROWS: 16,
+  HOME_ROWS: 8,
+  ROTATIONS: [0, 90, 180, 270],
+});
+
 export const PLAYER_COLORS = Object.freeze({
   1: '#1677c7',
   2: '#e75f2a',
 });
-
