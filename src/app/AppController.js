@@ -1,4 +1,5 @@
 import { GamePhase, GameStateMachine } from './GameStateMachine.js';
+import { renderDrawingScreen } from '../screens/DrawingScreen.js';
 import { renderMainScreen } from '../screens/MainScreen.js';
 
 export class AppController {
@@ -12,6 +13,10 @@ export class AppController {
 
     this.root = root;
     this.stateMachine = new GameStateMachine();
+    this.drawingDrafts = {
+      1: [],
+      2: [],
+    };
   }
 
   start() {
@@ -19,9 +24,22 @@ export class AppController {
   }
 
   render() {
+    if (this.stateMachine.phase === GamePhase.DRAW_PLAYER_1) {
+      this.root.replaceChildren(
+        renderDrawingScreen({
+          ownerId: 1,
+          draftCells: this.drawingDrafts[1],
+          onDraftChange: (cells) => {
+            this.drawingDrafts[1] = cells;
+          },
+          onBack: () => this.returnToTitle(),
+        }),
+      );
+      return;
+    }
+
     this.root.replaceChildren(
       renderMainScreen({
-        phase: this.stateMachine.phase,
         onStartLocal: () => this.startLocalMatchSetup(),
       }),
     );
@@ -34,5 +52,9 @@ export class AppController {
 
     this.render();
   }
-}
 
+  returnToTitle() {
+    this.stateMachine.reset();
+    this.render();
+  }
+}

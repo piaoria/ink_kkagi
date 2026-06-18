@@ -1,11 +1,10 @@
-import { GamePhase } from '../app/GameStateMachine.js';
 import { DRAWING_CONFIG, GAME_INFO } from '../config/gameConfig.js';
 
 /**
- * @param {{ phase: string, onStartLocal: () => void }} params
+ * @param {{ onStartLocal: () => void }} params
  * @returns {HTMLElement}
  */
-export function renderMainScreen({ phase, onStartLocal }) {
+export function renderMainScreen({ onStartLocal }) {
   const screen = document.createElement('main');
   screen.className = 'screen title-screen';
 
@@ -27,15 +26,12 @@ export function renderMainScreen({ phase, onStartLocal }) {
   const startButton = document.createElement('button');
   startButton.className = 'primary-action';
   startButton.type = 'button';
-  startButton.textContent = phase === GamePhase.TITLE ? '로컬 대전' : '제작 준비 중';
+  startButton.textContent = '로컬 대전';
   startButton.addEventListener('click', onStartLocal);
 
   const status = document.createElement('p');
   status.className = 'phase-status';
-  status.textContent =
-    phase === GamePhase.TITLE
-      ? `${DRAWING_CONFIG.PIECES_PER_PLAYER}개 말, ${DRAWING_CONFIG.TOTAL_INK}칸 잉크`
-      : 'Milestone 0';
+  status.textContent = `${DRAWING_CONFIG.PIECES_PER_PLAYER}개 말, ${DRAWING_CONFIG.TOTAL_INK}칸 잉크`;
 
   actions.append(startButton, status);
   copy.append(title, subtitle, actions);
@@ -79,4 +75,3 @@ function renderBoardPreview() {
 
   return preview;
 }
-
