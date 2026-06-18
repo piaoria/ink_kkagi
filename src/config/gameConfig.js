@@ -14,9 +14,9 @@ export const DRAWING_CONFIG = Object.freeze({
 });
 
 export const PLACEMENT_CONFIG = Object.freeze({
-  BOARD_COLUMNS: 12,
-  BOARD_ROWS: 18,
-  HOME_ROWS: 9,
+  BOARD_COLUMNS: 14,
+  BOARD_ROWS: 20,
+  HOME_ROWS: 10,
   ROTATIONS: [0, 90, 180, 270],
 });
 

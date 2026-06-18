@@ -23,6 +23,7 @@
 - Windows 원격 개발 환경에서 Vite 설정을 로드할 수 있도록 `--configLoader runner` 적용
 - 로컬 대전 버튼을 실제 제작 화면으로 이동하도록 변경
 - 배치 난이도를 낮추기 위해 총 잉크를 42칸으로 줄이고, 보드를 12x18 및 진영 9줄로 조정
+- 배치 공간을 더 확보하기 위해 보드를 14x20 및 진영 10줄로 확대
 - Vite와 Vitest를 업데이트해 `esbuild` 개발 서버 취약점 알림 제거
 - CI clean install을 위해 `@emnapi` peer dependency 명시
 

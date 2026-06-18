@@ -181,10 +181,12 @@
 
 .placement-board {
   --player-ink: var(--blue-ink);
+  --board-columns: 14;
+  --board-rows: 20;
   display: grid;
-  grid-template-columns: repeat(12, minmax(16px, 1fr));
-  width: min(100%, 620px);
-  aspect-ratio: 12 / 16;
+  grid-template-columns: repeat(var(--board-columns), minmax(14px, 1fr));
+  width: min(100%, 680px);
+  aspect-ratio: var(--board-columns) / var(--board-rows);
   padding: 10px;
   gap: 4px;
   border: 4px solid var(--ink-black);

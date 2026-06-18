@@ -57,6 +57,8 @@ export function renderPlacementScreen({
   const board = document.createElement('div');
   board.className = 'placement-board';
   board.style.setProperty('--player-ink', PLAYER_COLORS[ownerId]);
+  board.style.setProperty('--board-columns', PLACEMENT_CONFIG.BOARD_COLUMNS);
+  board.style.setProperty('--board-rows', PLACEMENT_CONFIG.BOARD_ROWS);
   board.setAttribute('aria-label', `${ownerId}P 말 배치 보드`);
 
   const panel = document.createElement('aside');
@@ -262,6 +264,8 @@ export function renderMatchReadyScreen({ playerPieces, playerPlacements, onBackT
 
   const board = document.createElement('div');
   board.className = 'placement-board is-readonly';
+  board.style.setProperty('--board-columns', PLACEMENT_CONFIG.BOARD_COLUMNS);
+  board.style.setProperty('--board-rows', PLACEMENT_CONFIG.BOARD_ROWS);
   board.setAttribute('aria-label', '배치 완료 보드');
 
   const occupied = new Map();
