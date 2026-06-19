@@ -11,28 +11,28 @@ const makeCells = (count) =>
 
 describe('piece drawing rules', () => {
   it('limits the first piece so future pieces can keep minimum ink', () => {
-    expect(getMaxInkForCurrentPiece([])).toBe(22);
+    expect(getMaxInkForCurrentPiece([])).toBe(18);
   });
 
   it('limits the second piece based on ink reserved for the last piece', () => {
-    const completedPieces = [{ pixelCount: 22 }];
+    const completedPieces = [{ pixelCount: 18 }];
 
-    expect(getMaxInkForCurrentPiece(completedPieces)).toBe(12);
+    expect(getMaxInkForCurrentPiece(completedPieces)).toBe(11);
   });
 
   it('raises the current minimum so future pieces can stay under maximum ink', () => {
-    const completedPieces = [{ pixelCount: 8 }];
+    const completedPieces = [{ pixelCount: 7 }];
 
-    expect(getMinInkForCurrentPiece(completedPieces)).toBe(12);
-    expect(validatePieceDraft({ cells: makeCells(8), completedPieces }).valid).toBe(false);
-    expect(validatePieceDraft({ cells: makeCells(12), completedPieces }).valid).toBe(true);
+    expect(getMinInkForCurrentPiece(completedPieces)).toBe(11);
+    expect(validatePieceDraft({ cells: makeCells(7), completedPieces }).valid).toBe(false);
+    expect(validatePieceDraft({ cells: makeCells(11), completedPieces }).valid).toBe(true);
   });
 
   it('requires the last piece to use all remaining ink', () => {
-    const completedPieces = [{ pixelCount: 22 }, { pixelCount: 12 }];
+    const completedPieces = [{ pixelCount: 18 }, { pixelCount: 11 }];
 
-    expect(validatePieceDraft({ cells: makeCells(7), completedPieces }).valid).toBe(false);
-    expect(validatePieceDraft({ cells: makeCells(8), completedPieces }).valid).toBe(true);
+    expect(validatePieceDraft({ cells: makeCells(6), completedPieces }).valid).toBe(false);
+    expect(validatePieceDraft({ cells: makeCells(7), completedPieces }).valid).toBe(true);
   });
 
   it('rejects diagonally connected cells', () => {
