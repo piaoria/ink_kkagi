@@ -4,6 +4,7 @@ import {
   getAimPower,
   getLaunchVector,
   isLaunchReady,
+  setAimPower,
 } from '../src/match/aiming.js';
 
 describe('aiming', () => {
@@ -23,5 +24,10 @@ describe('aiming', () => {
     expect(getAimPower({ x: 3, y: 4 }, 10)).toBe(0.5);
     expect(isLaunchReady({ x: 1, y: 1 })).toBe(false);
     expect(isLaunchReady({ x: 20, y: 0 })).toBe(true);
+  });
+
+  it('changes power without changing an established aim direction', () => {
+    expect(setAimPower({ x: 3, y: 4 }, 0.5, 100)).toEqual({ x: 30, y: 40 });
+    expect(setAimPower({ x: 0, y: 0 }, 0.5, 100)).toEqual({ x: 0, y: 0 });
   });
 });

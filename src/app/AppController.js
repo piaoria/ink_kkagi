@@ -41,7 +41,7 @@ export class AppController {
       simulationFrames: [],
       simulationFrameIndex: 0,
     };
-    this.simulationTimer = null;
+    this.simulationFrameRequest = null;
   }
 
   start() {
@@ -170,7 +170,7 @@ export class AppController {
   }
 
   returnToTitle() {
-    this.clearSimulationTimer();
+    this.clearSimulationFrame();
     this.stateMachine.reset();
     this.drawingDrafts = {
       1: [],
@@ -300,7 +300,8 @@ export class AppController {
       playerPlacements: this.playerPlacements,
       selectedPieceId: this.matchState.selectedPieceId,
       aimVector: this.matchState.aimVector,
-      frameCount: 10,
+      stepCount: 60,
+      frameCount: 60,
     });
 
     this.matchState = {
@@ -319,7 +320,7 @@ export class AppController {
     const nextFrameIndex = this.matchState.simulationFrameIndex + 1;
 
     if (nextFrameIndex < simulation.frames.length) {
-      this.simulationTimer = window.setTimeout(() => {
+      this.simulationFrameRequest = window.requestAnimationFrame(() => {
         if (this.stateMachine.phase !== GamePhase.SIMULATING) {
           return;
         }
@@ -331,11 +332,11 @@ export class AppController {
         };
         this.render();
         this.playSimulation(simulation);
-      }, 70);
+      });
       return;
     }
 
-    this.simulationTimer = window.setTimeout(() => this.finishSimulation(simulation), 90);
+    this.simulationFrameRequest = window.requestAnimationFrame(() => this.finishSimulation(simulation));
   }
 
   finishSimulation(simulation) {
@@ -343,7 +344,7 @@ export class AppController {
       return;
     }
 
-    this.simulationTimer = null;
+    this.simulationFrameRequest = null;
     this.playerPlacements = simulation.playerPlacements;
     const result = getMatchResult(this.playerPlacements);
     this.matchState = {
@@ -365,10 +366,10 @@ export class AppController {
     this.render();
   }
 
-  clearSimulationTimer() {
-    if (this.simulationTimer !== null) {
-      window.clearTimeout(this.simulationTimer);
-      this.simulationTimer = null;
+  clearSimulationFrame() {
+    if (this.simulationFrameRequest !== null) {
+      window.cancelAnimationFrame(this.simulationFrameRequest);
+      this.simulationFrameRequest = null;
     }
   }
 

@@ -11,6 +11,7 @@ import {
   getLaunchVector,
   getVectorMagnitude,
   isLaunchReady,
+  setAimPower,
 } from '../match/aiming.js';
 
 export function renderMatchScreen({
@@ -67,6 +68,7 @@ export function renderMatchScreen({
   let dragStart = null;
   let currentAimVector = aimVector;
   let powerValue;
+  let powerSlider;
   let fireButton;
   let status;
   let aimGuide;
@@ -84,7 +86,10 @@ export function renderMatchScreen({
       !isSimulating && selectedPieceId && isLaunchReady(currentAimVector),
     );
     powerValue.textContent = `${Math.round(power * 100)}%`;
+    powerSlider.value = String(Math.round(power * 100));
+    powerSlider.disabled = isSimulating || !selectedPieceId || magnitude === 0;
     fireButton.disabled = isSimulating || !selectedPieceId || !isLaunchReady(currentAimVector);
+    board.classList.toggle('is-aiming', !isSimulating && Boolean(selectedPieceId));
     status.className =
       !isSimulating && selectedPieceId && isLaunchReady(currentAimVector)
         ? 'validation-message is-valid'
@@ -113,10 +118,15 @@ export function renderMatchScreen({
       return;
     }
 
+    if (!event.target.closest('.match-piece.is-selected')) {
+      return;
+    }
+
     event.preventDefault();
     dragStart = { x: event.clientX, y: event.clientY };
     currentAimVector = { x: 0, y: 0 };
     board.setPointerCapture(event.pointerId);
+    board.classList.add('is-dragging');
     onAimChange(currentAimVector);
     syncAimControls();
   });
@@ -128,9 +138,11 @@ export function renderMatchScreen({
   });
   board.addEventListener('pointerup', () => {
     dragStart = null;
+    board.classList.remove('is-dragging');
   });
   board.addEventListener('pointercancel', () => {
     dragStart = null;
+    board.classList.remove('is-dragging');
   });
 
   const aimOrigin = getPieceCenterPercent(playerPlacements, selectedPieceId, PLACEMENT_CONFIG);
@@ -179,6 +191,22 @@ export function renderMatchScreen({
   const powerLabel = createPanelLabel('발사 세기');
   powerValue = document.createElement('strong');
   powerValue.className = 'ink-count';
+  powerSlider = document.createElement('input');
+  powerSlider.className = 'power-slider';
+  powerSlider.type = 'range';
+  powerSlider.min = '8';
+  powerSlider.max = '100';
+  powerSlider.step = '1';
+  powerSlider.addEventListener('input', () => {
+    const magnitude = getVectorMagnitude(currentAimVector);
+    if (!selectedPieceId || magnitude === 0) {
+      return;
+    }
+
+    currentAimVector = setAimPower(currentAimVector, Number(powerSlider.value) / 100);
+    onAimChange(currentAimVector);
+    syncAimControls();
+  });
   fireButton = document.createElement('button');
   fireButton.className = 'primary-action';
   fireButton.type = 'button';
@@ -200,6 +228,7 @@ export function renderMatchScreen({
     pieceList,
     powerLabel,
     powerValue,
+    powerSlider,
     fireButton,
     status,
     lastResult,
@@ -232,6 +261,10 @@ function renderMatchPiece({
 
   if (!isSimulating && placement.ownerId === activePlayerId) {
     piece.addEventListener('pointerdown', (event) => {
+      if (placement.pieceId === selectedPieceId) {
+        return;
+      }
+
       event.stopPropagation();
       onSelectPiece(placement.pieceId);
     });

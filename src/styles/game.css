@@ -260,16 +260,27 @@
   width: calc(100% / var(--board-columns));
   height: calc(100% / var(--board-rows));
   transform-origin: center;
+  transition: filter 120ms steps(2);
 }
 
 .match-piece.is-active-player {
   cursor: pointer;
 }
 
+.match-piece.is-active-player:hover .match-ink-cell {
+  border-color: var(--paper-hot);
+  filter: brightness(1.12);
+}
+
+.match-piece.is-selected {
+  z-index: 3;
+}
+
 .match-ink-cell {
   position: absolute;
-  width: 100%;
-  height: 100%;
+  width: 76%;
+  height: 76%;
+  margin: 12%;
   border: 2px solid var(--ink-black);
   background: var(--piece-ink);
   box-shadow: inset -4px -4px 0 rgba(18, 22, 27, 0.28);
@@ -278,6 +289,41 @@
 .match-piece.is-selected .match-ink-cell {
   outline: 3px solid var(--paper-hot);
   outline-offset: -2px;
+}
+
+.match-board.is-aiming {
+  cursor: grab;
+}
+
+.match-board.is-aiming .match-piece.is-selected {
+  animation: selected-piece-pulse 700ms steps(2) infinite;
+}
+
+.match-board.is-dragging {
+  cursor: grabbing;
+}
+
+.match-board.is-dragging .match-piece.is-selected {
+  animation: none;
+}
+
+@keyframes selected-piece-pulse {
+  50% {
+    filter: brightness(1.2);
+  }
+}
+
+.power-slider {
+  width: 100%;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--pink-ink);
+  cursor: ew-resize;
+}
+
+.power-slider:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .aim-guide {

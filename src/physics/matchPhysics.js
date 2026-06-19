@@ -4,7 +4,7 @@ import { PHYSICS_CONFIG } from '../config/physicsConfig.js';
 import { getLaunchVector } from '../match/aiming.js';
 import { getPlacementPose } from '../match/boardOccupancy.js';
 
-const CELL_HALF_SIZE = 0.46;
+const CELL_HALF_SIZE = 0.38;
 
 export function simulateLaunch({
   playerPlacements,
