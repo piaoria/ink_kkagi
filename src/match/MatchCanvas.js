@@ -10,7 +10,7 @@ import { getPlacementPose } from './boardOccupancy.js';
 
 const PIECE_SCALE = 0.76;
 
-export function createMatchCanvas({ board, state, onSelectPiece, onAimChange, onFire }) {
+export function createMatchCanvas({ board, state, onSelectPiece, onAimChange, onGripChange, onFire }) {
   const canvas = document.createElement('canvas');
   canvas.className = 'match-canvas';
   canvas.tabIndex = 0;
@@ -40,7 +40,8 @@ export function createMatchCanvas({ board, state, onSelectPiece, onAimChange, on
   canvas.addEventListener('pointerdown', (event) => {
     if (currentState.isSimulating) return;
     const point = getBoardPoint(event);
-    const piece = getPieceAtPoint(point);
+    const block = getBlockAtPoint(point);
+    const piece = block?.placement;
 
     if (!piece || piece.ownerId !== currentState.activePlayerId) return;
     if (piece.pieceId !== currentState.selectedPieceId) {
@@ -48,9 +49,11 @@ export function createMatchCanvas({ board, state, onSelectPiece, onAimChange, on
       return;
     }
 
+    const gripPoint = { pieceId: piece.pieceId, cell: block.cell };
     dragStart = { x: event.clientX, y: event.clientY };
-    currentState = { ...currentState, aimVector: { x: 0, y: 0 } };
+    currentState = { ...currentState, gripPoint, aimVector: { x: 0, y: 0 } };
     onAimChange(currentState.aimVector);
+    onGripChange(gripPoint);
     canvas.setPointerCapture(event.pointerId);
     canvas.classList.add('is-dragging');
   });
@@ -67,8 +70,8 @@ export function createMatchCanvas({ board, state, onSelectPiece, onAimChange, on
       return;
     }
 
-    const piece = getPieceAtPoint(getBoardPoint(event));
-    hoverPieceId = piece?.ownerId === currentState.activePlayerId ? piece.pieceId : null;
+    const block = getBlockAtPoint(getBoardPoint(event));
+    hoverPieceId = block?.placement.ownerId === currentState.activePlayerId ? block.placement.pieceId : null;
     updateCursor();
     draw();
   });
@@ -153,6 +156,9 @@ export function createMatchCanvas({ board, state, onSelectPiece, onAimChange, on
     }
     context.stroke();
     void fineUnit;
+    context.strokeStyle = PLAYER_COLORS[currentState.activePlayerId];
+    context.lineWidth = 4;
+    context.strokeRect(2, 2, size.width - 4, size.height - 4);
   }
 
   function drawPieces() {
@@ -168,10 +174,12 @@ export function createMatchCanvas({ board, state, onSelectPiece, onAimChange, on
     const pose = getPlacementPose(placement);
     const selected = placement.pieceId === currentState.selectedPieceId;
     const hovered = placement.pieceId === hoverPieceId;
+    const active = placement.ownerId === currentState.activePlayerId;
     const cellSize = size.unit * PIECE_SCALE;
     context.save();
     context.translate((center.x + pose.x + 0.5) * size.unit, (center.y + pose.y + 0.5) * size.unit);
     context.rotate(pose.angle);
+    context.globalAlpha = active ? 1 : 0.38;
     context.fillStyle = PLAYER_COLORS[placement.ownerId];
     context.strokeStyle = selected || hovered ? '#fff04a' : '#12161b';
     context.lineWidth = selected ? 4 : hovered ? 3 : 2;
@@ -200,6 +208,17 @@ export function createMatchCanvas({ board, state, onSelectPiece, onAimChange, on
       }
       context.fillStyle = PLAYER_COLORS[placement.ownerId];
     }
+    if (currentState.gripPoint?.pieceId === placement.pieceId) {
+      const gripCell = currentState.gripPoint.cell;
+      const x = (gripCell.x - center.x) * size.unit - cellSize / 2;
+      const y = (gripCell.y - center.y) * size.unit - cellSize / 2;
+      context.globalAlpha = 1;
+      context.strokeStyle = '#ffffff';
+      context.lineWidth = 3;
+      context.strokeRect(x + 4, y + 4, cellSize - 8, cellSize - 8);
+      context.fillStyle = '#fff04a';
+      context.fillRect(x + cellSize / 2 - 3, y + cellSize / 2 - 3, 6, 6);
+    }
     context.restore();
   }
 
@@ -210,8 +229,12 @@ export function createMatchCanvas({ board, state, onSelectPiece, onAimChange, on
     const center = getOriginalCenter(placement.occupiedCells);
     const pose = getPlacementPose(placement);
     const launch = getLaunchVector(currentState.aimVector);
-    const startX = (center.x + pose.x + 0.5) * size.unit;
-    const startY = (center.y + pose.y + 0.5) * size.unit;
+    const gripCell = currentState.gripPoint?.pieceId === placement.pieceId
+      ? currentState.gripPoint.cell
+      : { x: center.x, y: center.y };
+    const start = getCellWorldCenter(gripCell, center, pose);
+    const startX = start.x * size.unit;
+    const startY = start.y * size.unit;
     const length = Math.hypot(currentState.aimVector.x, currentState.aimVector.y);
     const preview = getPreviewEndpoint({
       startX,
@@ -230,6 +253,7 @@ export function createMatchCanvas({ board, state, onSelectPiece, onAimChange, on
     context.setLineDash([]);
     context.fillStyle = preview.hit ? '#e75f2a' : '#fff04a';
     context.fillRect(preview.x - 5, preview.y - 5, 10, 10);
+    drawSpinPreview(context, size, center, pose, gripCell, launch);
   }
 
   function drawParticles() {
@@ -271,6 +295,26 @@ export function createMatchCanvas({ board, state, onSelectPiece, onAimChange, on
     );
   }
 
+  function getBlockAtPoint(point) {
+    const pieces = [
+      ...(currentState.playerPlacements[2] ?? []),
+      ...(currentState.playerPlacements[1] ?? []),
+    ];
+    for (const placement of pieces) {
+      const center = getOriginalCenter(placement.occupiedCells);
+      const pose = getPlacementPose(placement);
+      const local = toLocalPoint(point, center, pose);
+      const half = PIECE_SCALE / 2;
+      const cell = placement.occupiedCells.find(
+        (candidate) =>
+          Math.abs(local.x - (candidate.x - center.x)) <= half &&
+          Math.abs(local.y - (candidate.y - center.y)) <= half,
+      );
+      if (cell) return { placement, cell };
+    }
+    return null;
+  }
+
   function getPreviewEndpoint({ startX, startY, launch, selectedPieceId, maxDistance }) {
     const step = size.unit * 0.16;
     for (let distance = step; distance <= maxDistance; distance += step) {
@@ -301,14 +345,7 @@ export function createMatchCanvas({ board, state, onSelectPiece, onAimChange, on
   function isPointInsidePiece(point, placement) {
     const center = getOriginalCenter(placement.occupiedCells);
     const pose = getPlacementPose(placement);
-    const origin = { x: center.x + pose.x + 0.5, y: center.y + pose.y + 0.5 };
-    const cosine = Math.cos(-pose.angle);
-    const sine = Math.sin(-pose.angle);
-    const translated = { x: point.x - origin.x, y: point.y - origin.y };
-    const local = {
-      x: translated.x * cosine - translated.y * sine,
-      y: translated.x * sine + translated.y * cosine,
-    };
+    const local = toLocalPoint(point, center, pose);
     const half = PIECE_SCALE / 2;
     return placement.occupiedCells.some(
       (cell) =>
@@ -330,6 +367,48 @@ export function createMatchCanvas({ board, state, onSelectPiece, onAimChange, on
 
   resize();
   return { update, destroy };
+}
+
+function getCellWorldCenter(cell, center, pose) {
+  const local = { x: cell.x - center.x, y: cell.y - center.y };
+  const cosine = Math.cos(pose.angle);
+  const sine = Math.sin(pose.angle);
+  return {
+    x: center.x + pose.x + 0.5 + local.x * cosine - local.y * sine,
+    y: center.y + pose.y + 0.5 + local.x * sine + local.y * cosine,
+  };
+}
+
+function toLocalPoint(point, center, pose) {
+  const origin = { x: center.x + pose.x + 0.5, y: center.y + pose.y + 0.5 };
+  const cosine = Math.cos(-pose.angle);
+  const sine = Math.sin(-pose.angle);
+  const translated = { x: point.x - origin.x, y: point.y - origin.y };
+  return {
+    x: translated.x * cosine - translated.y * sine,
+    y: translated.x * sine + translated.y * cosine,
+  };
+}
+
+function drawSpinPreview(context, size, center, pose, gripCell, launch) {
+  const gripOffset = { x: gripCell.x - center.x, y: gripCell.y - center.y };
+  const torque = gripOffset.x * launch.y - gripOffset.y * launch.x;
+  if (Math.abs(torque) < 0.12) return;
+  const origin = getCellWorldCenter({ x: center.x, y: center.y }, center, pose);
+  const radius = 16 + Math.min(10, Math.abs(torque) * 5);
+  const direction = torque > 0 ? 1 : -1;
+  context.strokeStyle = '#fff04a';
+  context.lineWidth = 3;
+  context.beginPath();
+  context.arc(
+    origin.x * size.unit,
+    origin.y * size.unit,
+    radius,
+    direction > 0 ? -Math.PI * 0.8 : Math.PI * 0.2,
+    direction > 0 ? Math.PI * 0.2 : Math.PI * 1.2,
+    direction < 0,
+  );
+  context.stroke();
 }
 
 function getOriginalCenter(cells) {

@@ -6,6 +6,7 @@ import { getAimPower, getVectorMagnitude, isLaunchReady, setAimPower } from '../
 export function renderMatchScreen({
   activePlayerId,
   selectedPieceId,
+  gripPoint = null,
   aimVector,
   lastKnockedOutPieceIds = [],
   playerPieces,
@@ -14,6 +15,7 @@ export function renderMatchScreen({
   impacts = [],
   matchHistory = [],
   onSelectPiece,
+  onGripChange,
   onAimChange,
   onFire,
   onBackToTitle,
@@ -54,8 +56,9 @@ export function renderMatchScreen({
   let status;
   const canvasView = createMatchCanvas({
     board,
-    state: { activePlayerId, selectedPieceId, aimVector, playerPlacements, isSimulating, impacts },
+    state: { activePlayerId, selectedPieceId, gripPoint, aimVector, playerPlacements, isSimulating, impacts },
     onSelectPiece,
+    onGripChange,
     onFire,
     onAimChange: (vector) => {
       currentAimVector = vector;

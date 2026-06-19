@@ -62,7 +62,7 @@ describe('match physics', () => {
     expect(getPose(largeResult).x).toBeCloseTo(getPose(smallResult).x, 6);
   });
 
-  it('normalizes total mass so larger ink shapes do not gain extra impact weight', () => {
+  it('gives larger ink shapes greater physical mass', () => {
     const worldState = createWorldFromPlacements({
       1: [makePlacement('small', 1, [{ x: 2, y: 4 }])],
       2: [
@@ -75,10 +75,24 @@ describe('match physics', () => {
       ],
     });
 
-    expect(worldState.bodiesByPieceId.get('small').getMass()).toBeCloseTo(
-      worldState.bodiesByPieceId.get('large').getMass(),
-      6,
+    expect(worldState.bodiesByPieceId.get('large').getMass()).toBeGreaterThan(
+      worldState.bodiesByPieceId.get('small').getMass(),
     );
+  });
+
+  it('adds spin when a non-central block is used as a grip point', () => {
+    const result = simulateLaunch({
+      playerPlacements: {
+        1: [makePlacement('p1-piece-1', 1, [{ x: 4, y: 4 }, { x: 5, y: 4 }])],
+        2: [],
+      },
+      selectedPieceId: 'p1-piece-1',
+      gripCell: { x: 4, y: 4 },
+      aimVector: { x: 0, y: -180 },
+      stepCount: 20,
+    });
+
+    expect(Math.abs(getPose(result).angle)).toBeGreaterThan(0.01);
   });
 
   it('keeps diagonal launch coordinates without snapping them to a grid', () => {

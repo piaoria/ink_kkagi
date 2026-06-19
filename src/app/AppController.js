@@ -117,6 +117,7 @@ export class AppController {
       this.matchView = renderMatchScreen({
           activePlayerId: this.matchState.activePlayerId,
           selectedPieceId: this.matchState.selectedPieceId,
+          gripPoint: this.matchState.gripPoint,
           aimVector: this.matchState.aimVector,
           lastKnockedOutPieceIds: this.matchState.lastKnockedOutPieceIds,
           playerPieces: this.playerPieces,
@@ -126,6 +127,7 @@ export class AppController {
           matchHistory: this.matchHistory,
           onSelectPiece: (pieceId) => this.selectMatchPiece(pieceId),
           onAimChange: (vector) => this.updateAimVector(vector),
+          onGripChange: (gripPoint) => this.updateGripPoint(gripPoint),
           onFire: () => this.fireSelectedPiece(),
           onBackToTitle: () => this.returnToTitle(),
         });
@@ -197,6 +199,7 @@ export class AppController {
     this.matchState = {
       activePlayerId: 1,
       selectedPieceId: null,
+      gripPoint: null,
       aimVector: { x: 0, y: 0 },
       lastKnockedOutPieceIds: [],
       result: null,
@@ -288,6 +291,7 @@ export class AppController {
     this.matchState = {
       ...this.matchState,
       selectedPieceId: pieceId,
+      gripPoint: null,
       aimVector: { x: 0, y: 0 },
       lastKnockedOutPieceIds: [],
       result: null,
@@ -302,6 +306,13 @@ export class AppController {
     };
   }
 
+  updateGripPoint(gripPoint) {
+    this.matchState = {
+      ...this.matchState,
+      gripPoint,
+    };
+  }
+
   fireSelectedPiece() {
     if (!this.matchState.selectedPieceId) {
       return;
@@ -313,6 +324,7 @@ export class AppController {
       playerPlacements: this.playerPlacements,
       selectedPieceId: this.matchState.selectedPieceId,
       aimVector: this.matchState.aimVector,
+      gripCell: this.matchState.gripPoint?.cell,
       stepCount: 240,
       frameCount: 72,
     });
@@ -320,6 +332,7 @@ export class AppController {
     this.matchState = {
       ...this.matchState,
       selectedPieceId: null,
+      gripPoint: null,
       aimVector: { x: 0, y: 0 },
       simulationFrames: simulation.frames,
       simulationFrameIndex: 0,
@@ -384,6 +397,7 @@ export class AppController {
     this.matchState = {
       activePlayerId: this.matchState.activePlayerId === 1 ? 2 : 1,
       selectedPieceId: null,
+      gripPoint: null,
       aimVector: { x: 0, y: 0 },
       lastKnockedOutPieceIds: simulation.knockedOutPieceIds,
       result,

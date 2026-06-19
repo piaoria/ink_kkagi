@@ -11,6 +11,7 @@ export function simulateLaunch({
   playerPlacements,
   selectedPieceId,
   aimVector,
+  gripCell = null,
   config = PHYSICS_CONFIG,
   boardConfig = PLACEMENT_CONFIG,
   stepCount = 90,
@@ -35,7 +36,11 @@ export function simulateLaunch({
     launch.y * launchSpeed * launchMass,
   );
 
-  launchBody.applyLinearImpulse(impulse, launchBody.getWorldCenter(), true);
+  launchBody.applyLinearImpulse(
+    impulse,
+    getGripWorldPoint(worldState, selectedPieceId, gripCell) ?? launchBody.getWorldCenter(),
+    true,
+  );
 
   const frames = [];
   const impacts = [];
@@ -72,10 +77,12 @@ export function simulateLaunch({
       firstVelocity.x - secondVelocity.x,
       firstVelocity.y - secondVelocity.y,
     );
+    const reducedMass =
+      (firstBody.getMass() * secondBody.getMass()) / (firstBody.getMass() + secondBody.getMass());
     impacts.push({
       x: (firstPoint.x + secondPoint.x) / 2,
       y: (firstPoint.y + secondPoint.y) / 2,
-      strength: Math.min(1, relativeSpeed / 12),
+      strength: Math.min(1, (relativeSpeed * Math.sqrt(reducedMass)) / 14),
       pieceIds: [firstPiece, secondPiece],
     });
   });
@@ -127,6 +134,15 @@ export function simulateLaunch({
   };
 }
 
+function getGripWorldPoint(worldState, pieceId, gripCell) {
+  if (!gripCell) return null;
+  const body = worldState.bodiesByPieceId.get(pieceId);
+  const center = worldState.centersByPieceId.get(pieceId);
+  if (!body || !center) return null;
+
+  return body.getWorldPoint(planck.Vec2(gripCell.x - center.x, gripCell.y - center.y));
+}
+
 function getFixtureCenter(fixture) {
   const bounds = fixture.getAABB(0);
   return {
@@ -173,7 +189,7 @@ export function createWorldFromPlacements(playerPlacements, config = PHYSICS_CON
       for (const localCell of localCells) {
         body.createFixture({
           shape: planck.Box(CELL_HALF_SIZE, CELL_HALF_SIZE, planck.Vec2(localCell.x, localCell.y), 0),
-          density: 1 / localCells.length,
+          density: 1,
           friction: config.FIXTURE_FRICTION,
           restitution: config.FIXTURE_RESTITUTION,
         });
