@@ -12,6 +12,7 @@ export function renderMatchScreen({
   playerPlacements,
   isSimulating = false,
   impacts = [],
+  matchHistory = [],
   onSelectPiece,
   onAimChange,
   onFire,
@@ -107,7 +108,14 @@ export function renderMatchScreen({
   const result = document.createElement('p');
   result.className = lastKnockedOutPieceIds.length ? 'validation-message is-valid' : 'validation-message';
   result.textContent = lastKnockedOutPieceIds.length ? `낙장: ${lastKnockedOutPieceIds.join(', ')}` : '아직 낙장된 말이 없습니다.';
-  panel.append(powerValue, powerSlider, fireButton, status, result);
+  const history = document.createElement('div');
+  history.className = 'match-history';
+  for (const entry of matchHistory) {
+    const item = document.createElement('p');
+    item.textContent = `${entry.playerId}P / OUT ${entry.knockedOut} / BREAK ${entry.fractured}`;
+    history.append(item);
+  }
+  panel.append(powerValue, powerSlider, fireButton, status, result, history);
   layout.append(board, panel);
   screen.append(header, layout);
 

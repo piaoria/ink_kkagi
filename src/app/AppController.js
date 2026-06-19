@@ -7,6 +7,8 @@ import { renderMatchOverScreen } from '../screens/MatchOverScreen.js';
 import { renderMatchReadyScreen, renderPlacementScreen } from '../screens/PlacementScreen.js';
 import { getMatchResult } from '../match/matchRules.js';
 import { simulateLaunch } from '../physics/matchPhysics.js';
+import { playBreakSound, playImpactSound, playShotSound } from '../match/audioFeedback.js';
+import { getAimPower } from '../match/aiming.js';
 import { createAutoPlacementsForPlayer, createQuickMatchSetup } from '../setup/quickSetup.js';
 
 export class AppController {
@@ -43,6 +45,7 @@ export class AppController {
     };
     this.simulationFrameRequest = null;
     this.matchView = null;
+    this.matchHistory = [];
   }
 
   start() {
@@ -120,6 +123,7 @@ export class AppController {
           playerPlacements: this.playerPlacements,
           isSimulating: this.stateMachine.phase === GamePhase.SIMULATING,
           impacts: this.matchState.impacts ?? [],
+          matchHistory: this.matchHistory,
           onSelectPiece: (pieceId) => this.selectMatchPiece(pieceId),
           onAimChange: (vector) => this.updateAimVector(vector),
           onFire: () => this.fireSelectedPiece(),
@@ -189,6 +193,7 @@ export class AppController {
       1: [],
       2: [],
     };
+    this.matchHistory = [];
     this.matchState = {
       activePlayerId: 1,
       selectedPieceId: null,
@@ -198,6 +203,7 @@ export class AppController {
       simulationFrames: [],
       simulationFrameIndex: 0,
     };
+    this.matchHistory = [];
     this.render();
   }
 
@@ -264,6 +270,7 @@ export class AppController {
       return;
     }
 
+    this.matchHistory = [];
     this.matchState = {
       activePlayerId: 1,
       selectedPieceId: null,
@@ -301,6 +308,7 @@ export class AppController {
     }
 
     this.stateMachine.transition(GamePhase.SIMULATING);
+    playShotSound(getAimPower(this.matchState.aimVector));
     const simulation = simulateLaunch({
       playerPlacements: this.playerPlacements,
       selectedPieceId: this.matchState.selectedPieceId,
@@ -337,6 +345,9 @@ export class AppController {
           simulationFrameIndex: nextFrameIndex,
           impacts: simulation.frames[nextFrameIndex].impacts ?? [],
         };
+        for (const impact of this.matchState.impacts) {
+          playImpactSound(impact.strength);
+        }
         this.matchView?.updateMatch({
           playerPlacements: this.playerPlacements,
           aimVector: this.matchState.aimVector,
@@ -358,7 +369,18 @@ export class AppController {
 
     this.simulationFrameRequest = null;
     this.playerPlacements = simulation.playerPlacements;
+    if (simulation.fragmentedPieceIds.length > 0) {
+      playBreakSound();
+    }
     const result = getMatchResult(this.playerPlacements);
+    this.matchHistory = [
+      {
+        playerId: this.matchState.activePlayerId,
+        knockedOut: simulation.knockedOutPieceIds.length,
+        fractured: simulation.fragmentedPieceIds.length,
+      },
+      ...this.matchHistory,
+    ].slice(0, 4);
     this.matchState = {
       activePlayerId: this.matchState.activePlayerId === 1 ? 2 : 1,
       selectedPieceId: null,

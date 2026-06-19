@@ -64,8 +64,8 @@ export function simulateLaunch({
     }
     damagedPairs.add(pairKey);
 
-    const firstPosition = firstBody.getPosition();
-    const secondPosition = secondBody.getPosition();
+    const firstPoint = getFixtureCenter(contact.getFixtureA());
+    const secondPoint = getFixtureCenter(contact.getFixtureB());
     const firstVelocity = firstBody.getLinearVelocity();
     const secondVelocity = secondBody.getLinearVelocity();
     const relativeSpeed = Math.hypot(
@@ -73,8 +73,8 @@ export function simulateLaunch({
       firstVelocity.y - secondVelocity.y,
     );
     impacts.push({
-      x: (firstPosition.x + secondPosition.x) / 2,
-      y: (firstPosition.y + secondPosition.y) / 2,
+      x: (firstPoint.x + secondPoint.x) / 2,
+      y: (firstPoint.y + secondPoint.y) / 2,
       strength: Math.min(1, relativeSpeed / 12),
       pieceIds: [firstPiece, secondPiece],
     });
@@ -104,14 +104,34 @@ export function simulateLaunch({
     frames.push(result);
   }
   const damage = applyImpactDamage(result.playerPlacements, impacts);
-
-  return {
+  const finalResult = {
     ...result,
     playerPlacements: damage.playerPlacements,
     knockedOutPieceIds: [...result.knockedOutPieceIds, ...damage.destroyedPieceIds],
     fragmentedPieceIds: damage.fragmentedPieceIds,
+  };
+
+  if (frameCount > 0 && (damage.destroyedPieceIds.length > 0 || damage.fragmentedPieceIds.length > 0)) {
+    for (let index = 0; index < 6; index += 1) {
+      frames.push({
+        ...finalResult,
+        impacts: index === 0 ? impacts.slice(capturedImpactCount) : [],
+      });
+    }
+  }
+
+  return {
+    ...finalResult,
     frames,
     impacts: impacts.slice(capturedImpactCount),
+  };
+}
+
+function getFixtureCenter(fixture) {
+  const bounds = fixture.getAABB(0);
+  return {
+    x: (bounds.lowerBound.x + bounds.upperBound.x) / 2,
+    y: (bounds.lowerBound.y + bounds.upperBound.y) / 2,
   };
 }
 

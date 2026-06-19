@@ -352,6 +352,20 @@
   opacity: 0.45;
 }
 
+.match-history {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border: 3px solid var(--ink-black);
+  background: #eef2f2;
+}
+
+.match-history p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
 .aim-guide {
   --aim-length: 24px;
   --aim-angle: 0rad;
