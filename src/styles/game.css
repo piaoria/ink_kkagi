@@ -183,6 +183,7 @@
   --player-ink: var(--blue-ink);
   --board-columns: 14;
   --board-rows: 20;
+  position: relative;
   display: grid;
   grid-template-columns: repeat(var(--board-columns), minmax(14px, 1fr));
   width: min(100%, 680px);
@@ -234,6 +235,26 @@
 .match-cell.is-selected {
   outline: 4px solid var(--paper-hot);
   outline-offset: -2px;
+}
+
+.aim-guide {
+  --aim-length: 24px;
+  --aim-angle: 0rad;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--aim-length);
+  height: 6px;
+  border: 2px solid var(--ink-black);
+  background: var(--paper-hot);
+  opacity: 0;
+  transform: translate(-50%, -50%) rotate(var(--aim-angle));
+  transform-origin: left center;
+  pointer-events: none;
+}
+
+.aim-guide.is-active {
+  opacity: 1;
 }
 
 .placement-board.is-readonly .placement-cell {

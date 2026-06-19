@@ -1,14 +1,25 @@
+import { PHYSICS_CONFIG } from '../config/physicsConfig.js';
 import { PLACEMENT_CONFIG, PLAYER_COLORS } from '../config/gameConfig.js';
 import { toCellKey } from '../drawing/drawingValidation.js';
 import { buildBoardOccupancy, getActivePieces } from '../match/boardOccupancy.js';
+import {
+  clampAimVector,
+  getAimPower,
+  getLaunchVector,
+  getVectorMagnitude,
+  isLaunchReady,
+} from '../match/aiming.js';
 
 /**
  * @param {{
  *   activePlayerId: 1 | 2,
  *   selectedPieceId: string | null,
+ *   aimVector: { x: number, y: number },
  *   playerPieces: Record<1 | 2, { id: string, pixelCount: number }[]>,
  *   playerPlacements: Record<1 | 2, { pieceId: string, ownerId: 1 | 2, occupiedCells: { x: number, y: number }[] }[]>,
  *   onSelectPiece: (pieceId: string) => void,
+ *   onAimChange: (vector: { x: number, y: number }) => void,
+ *   onFire: () => void,
  *   onBackToTitle: () => void,
  * }} params
  * @returns {HTMLElement}
@@ -16,9 +27,12 @@ import { buildBoardOccupancy, getActivePieces } from '../match/boardOccupancy.js
 export function renderMatchScreen({
   activePlayerId,
   selectedPieceId,
+  aimVector,
   playerPieces,
   playerPlacements,
   onSelectPiece,
+  onAimChange,
+  onFire,
   onBackToTitle,
 }) {
   const screen = document.createElement('main');
@@ -55,6 +69,80 @@ export function renderMatchScreen({
   board.style.setProperty('--board-rows', PLACEMENT_CONFIG.BOARD_ROWS);
   board.setAttribute('aria-label', '경기 보드');
 
+  let dragStart = null;
+  let currentAimVector = aimVector;
+  let powerValue;
+  let fireButton;
+  let status;
+  let aimGuide;
+
+  const syncAimControls = () => {
+    const power = getAimPower(currentAimVector);
+    const magnitude = getVectorMagnitude(currentAimVector);
+    const launchVector = getLaunchVector(currentAimVector);
+    const angle = Math.atan2(launchVector.y, launchVector.x);
+
+    aimGuide.style.setProperty('--aim-length', `${Math.max(24, magnitude)}px`);
+    aimGuide.style.setProperty('--aim-angle', `${angle}rad`);
+    aimGuide.classList.toggle('is-active', selectedPieceId && isLaunchReady(currentAimVector));
+    powerValue.textContent = `${Math.round(power * 100)}%`;
+    fireButton.disabled = !selectedPieceId || !isLaunchReady(currentAimVector);
+    status.className =
+      selectedPieceId && isLaunchReady(currentAimVector)
+        ? 'validation-message is-valid'
+        : 'validation-message';
+    status.textContent = getStatusText({
+      selectedPieceId,
+      aimVector: currentAimVector,
+    });
+  };
+
+  const syncAimFromPointer = (event) => {
+    if (!dragStart || !selectedPieceId) {
+      return;
+    }
+
+    currentAimVector = clampAimVector(
+      {
+        x: event.clientX - dragStart.x,
+        y: event.clientY - dragStart.y,
+      },
+      PHYSICS_CONFIG.MAX_DRAG_DISTANCE,
+    );
+    onAimChange(currentAimVector);
+    syncAimControls();
+  };
+
+  board.addEventListener('pointerdown', (event) => {
+    if (!selectedPieceId) {
+      return;
+    }
+
+    event.preventDefault();
+    dragStart = {
+      x: event.clientX,
+      y: event.clientY,
+    };
+    currentAimVector = { x: 0, y: 0 };
+    board.setPointerCapture(event.pointerId);
+    onAimChange(currentAimVector);
+    syncAimControls();
+  });
+
+  board.addEventListener('pointermove', (event) => {
+    if (dragStart) {
+      event.preventDefault();
+      syncAimFromPointer(event);
+    }
+  });
+
+  const endAimDrag = () => {
+    dragStart = null;
+  };
+
+  board.addEventListener('pointerup', endAimDrag);
+  board.addEventListener('pointercancel', endAimDrag);
+
   const occupancy = buildBoardOccupancy(playerPlacements);
 
   for (let y = 0; y < PLACEMENT_CONFIG.BOARD_ROWS; y += 1) {
@@ -75,12 +163,19 @@ export function renderMatchScreen({
       cell.setAttribute('aria-label', `${x + 1}열 ${y + 1}행`);
 
       if (occupant?.ownerId === activePlayerId) {
-        cell.addEventListener('click', () => onSelectPiece(occupant.pieceId));
+        cell.addEventListener('click', (event) => {
+          event.stopPropagation();
+          onSelectPiece(occupant.pieceId);
+        });
       }
 
       board.append(cell);
     }
   }
+
+  aimGuide = document.createElement('div');
+  aimGuide.className = 'aim-guide';
+  board.append(aimGuide);
 
   const panel = document.createElement('aside');
   panel.className = 'drawing-panel placement-panel';
@@ -110,15 +205,38 @@ export function renderMatchScreen({
     pieceList.append(button);
   }
 
-  const status = document.createElement('p');
-  status.className = selectedPieceId ? 'validation-message is-valid' : 'validation-message';
-  status.textContent = selectedPieceId
-    ? '선택 완료. 다음 패치에서 조준선을 연결합니다.'
-    : '발사할 말을 선택해 주세요.';
+  const powerLabel = document.createElement('p');
+  powerLabel.className = 'panel-label';
+  powerLabel.textContent = '발사 세기';
 
-  panel.append(turnLabel, turnValue, piecesLabel, pieceList, status);
+  powerValue = document.createElement('strong');
+  powerValue.className = 'ink-count';
+
+  fireButton = document.createElement('button');
+  fireButton.className = 'primary-action';
+  fireButton.type = 'button';
+  fireButton.textContent = '발사';
+  fireButton.addEventListener('click', onFire);
+
+  status = document.createElement('p');
+
+  panel.append(turnLabel, turnValue, piecesLabel, pieceList, powerLabel, powerValue, fireButton, status);
   layout.append(board, panel);
   screen.append(header, layout);
 
+  syncAimControls();
+
   return screen;
+}
+
+function getStatusText({ selectedPieceId, aimVector }) {
+  if (!selectedPieceId) {
+    return '발사할 말을 선택해 주세요.';
+  }
+
+  if (!isLaunchReady(aimVector)) {
+    return '보드 위에서 뒤로 끌어당겨 방향과 세기를 정해 주세요.';
+  }
+
+  return '발사 준비 완료. 버튼을 누르면 다음 물리 단계로 넘깁니다.';
 }

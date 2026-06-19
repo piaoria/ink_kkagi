@@ -32,6 +32,7 @@ export class AppController {
     this.matchState = {
       activePlayerId: 1,
       selectedPieceId: null,
+      aimVector: { x: 0, y: 0 },
     };
   }
 
@@ -98,9 +99,12 @@ export class AppController {
         renderMatchScreen({
           activePlayerId: this.matchState.activePlayerId,
           selectedPieceId: this.matchState.selectedPieceId,
+          aimVector: this.matchState.aimVector,
           playerPieces: this.playerPieces,
           playerPlacements: this.playerPlacements,
           onSelectPiece: (pieceId) => this.selectMatchPiece(pieceId),
+          onAimChange: (vector) => this.updateAimVector(vector),
+          onFire: () => this.fireSelectedPiece(),
           onBackToTitle: () => this.returnToTitle(),
         }),
       );
@@ -157,6 +161,7 @@ export class AppController {
     this.matchState = {
       activePlayerId: 1,
       selectedPieceId: null,
+      aimVector: { x: 0, y: 0 },
     };
     this.render();
   }
@@ -227,6 +232,7 @@ export class AppController {
     this.matchState = {
       activePlayerId: 1,
       selectedPieceId: null,
+      aimVector: { x: 0, y: 0 },
     };
     this.stateMachine.transition(GamePhase.AIMING);
     this.render();
@@ -236,7 +242,30 @@ export class AppController {
     this.matchState = {
       ...this.matchState,
       selectedPieceId: pieceId,
+      aimVector: { x: 0, y: 0 },
     };
+    this.render();
+  }
+
+  updateAimVector(vector) {
+    this.matchState = {
+      ...this.matchState,
+      aimVector: vector,
+    };
+  }
+
+  fireSelectedPiece() {
+    if (!this.matchState.selectedPieceId) {
+      return;
+    }
+
+    this.stateMachine.transition(GamePhase.SIMULATING);
+    this.matchState = {
+      activePlayerId: this.matchState.activePlayerId === 1 ? 2 : 1,
+      selectedPieceId: null,
+      aimVector: { x: 0, y: 0 },
+    };
+    this.stateMachine.transition(GamePhase.AIMING);
     this.render();
   }
 }
