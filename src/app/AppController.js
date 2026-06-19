@@ -4,6 +4,7 @@ import { renderDrawingScreen } from '../screens/DrawingScreen.js';
 import { renderMainScreen } from '../screens/MainScreen.js';
 import { renderMatchScreen } from '../screens/MatchScreen.js';
 import { renderMatchReadyScreen, renderPlacementScreen } from '../screens/PlacementScreen.js';
+import { simulateLaunch } from '../physics/matchPhysics.js';
 import { createAutoPlacementsForPlayer, createQuickMatchSetup } from '../setup/quickSetup.js';
 
 export class AppController {
@@ -33,6 +34,7 @@ export class AppController {
       activePlayerId: 1,
       selectedPieceId: null,
       aimVector: { x: 0, y: 0 },
+      lastKnockedOutPieceIds: [],
     };
   }
 
@@ -100,6 +102,7 @@ export class AppController {
           activePlayerId: this.matchState.activePlayerId,
           selectedPieceId: this.matchState.selectedPieceId,
           aimVector: this.matchState.aimVector,
+          lastKnockedOutPieceIds: this.matchState.lastKnockedOutPieceIds,
           playerPieces: this.playerPieces,
           playerPlacements: this.playerPlacements,
           onSelectPiece: (pieceId) => this.selectMatchPiece(pieceId),
@@ -162,6 +165,7 @@ export class AppController {
       activePlayerId: 1,
       selectedPieceId: null,
       aimVector: { x: 0, y: 0 },
+      lastKnockedOutPieceIds: [],
     };
     this.render();
   }
@@ -233,6 +237,7 @@ export class AppController {
       activePlayerId: 1,
       selectedPieceId: null,
       aimVector: { x: 0, y: 0 },
+      lastKnockedOutPieceIds: [],
     };
     this.stateMachine.transition(GamePhase.AIMING);
     this.render();
@@ -243,6 +248,7 @@ export class AppController {
       ...this.matchState,
       selectedPieceId: pieceId,
       aimVector: { x: 0, y: 0 },
+      lastKnockedOutPieceIds: [],
     };
     this.render();
   }
@@ -260,10 +266,18 @@ export class AppController {
     }
 
     this.stateMachine.transition(GamePhase.SIMULATING);
+    const simulation = simulateLaunch({
+      playerPlacements: this.playerPlacements,
+      selectedPieceId: this.matchState.selectedPieceId,
+      aimVector: this.matchState.aimVector,
+    });
+
+    this.playerPlacements = simulation.playerPlacements;
     this.matchState = {
       activePlayerId: this.matchState.activePlayerId === 1 ? 2 : 1,
       selectedPieceId: null,
       aimVector: { x: 0, y: 0 },
+      lastKnockedOutPieceIds: simulation.knockedOutPieceIds,
     };
     this.stateMachine.transition(GamePhase.AIMING);
     this.render();

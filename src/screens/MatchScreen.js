@@ -15,6 +15,7 @@ import {
  *   activePlayerId: 1 | 2,
  *   selectedPieceId: string | null,
  *   aimVector: { x: number, y: number },
+ *   lastKnockedOutPieceIds: string[],
  *   playerPieces: Record<1 | 2, { id: string, pixelCount: number }[]>,
  *   playerPlacements: Record<1 | 2, { pieceId: string, ownerId: 1 | 2, occupiedCells: { x: number, y: number }[] }[]>,
  *   onSelectPiece: (pieceId: string) => void,
@@ -28,6 +29,7 @@ export function renderMatchScreen({
   activePlayerId,
   selectedPieceId,
   aimVector,
+  lastKnockedOutPieceIds = [],
   playerPieces,
   playerPlacements,
   onSelectPiece,
@@ -220,7 +222,27 @@ export function renderMatchScreen({
 
   status = document.createElement('p');
 
-  panel.append(turnLabel, turnValue, piecesLabel, pieceList, powerLabel, powerValue, fireButton, status);
+  const lastResult = document.createElement('p');
+  lastResult.className =
+    lastKnockedOutPieceIds.length > 0
+      ? 'validation-message is-valid'
+      : 'validation-message';
+  lastResult.textContent =
+    lastKnockedOutPieceIds.length > 0
+      ? `낙장: ${lastKnockedOutPieceIds.join(', ')}`
+      : '아직 낙장된 말이 없습니다.';
+
+  panel.append(
+    turnLabel,
+    turnValue,
+    piecesLabel,
+    pieceList,
+    powerLabel,
+    powerValue,
+    fireButton,
+    status,
+    lastResult,
+  );
   layout.append(board, panel);
   screen.append(header, layout);
 
