@@ -1,4 +1,4 @@
-import { DRAWING_CONFIG, PLAYER_COLORS } from '../config/gameConfig.js';
+import { DRAWING_CONFIG, PLACEMENT_CONFIG, PLAYER_COLORS } from '../config/gameConfig.js';
 import { validatePiecePlacement } from '../placement/placementValidation.js';
 
 const STARTER_PIECES = [
@@ -101,7 +101,12 @@ function findFirstValidPlacement({ ownerId, piece, existingPlacements }) {
   const preferredRows =
     ownerId === 1
       ? [0, 3, 6, 1, 4, 7]
-      : [15, 12, 10, 14, 11, 13];
+      : [
+          PLACEMENT_CONFIG.BOARD_ROWS - 6,
+          PLACEMENT_CONFIG.BOARD_ROWS - 8,
+          PLACEMENT_CONFIG.BOARD_ROWS - 5,
+          PLACEMENT_CONFIG.BOARD_ROWS - 7,
+        ];
   const preferredColumns = [0, 5, 9, 2, 7, 4, 10, 1, 6, 8, 3];
 
   for (const y of preferredRows) {

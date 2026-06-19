@@ -182,6 +182,17 @@ export function createMatchCanvas({ board, state, onSelectPiece, onAimChange, on
       context.strokeRect(x, y, cellSize, cellSize);
       context.fillStyle = 'rgba(18, 22, 27, 0.16)';
       context.fillRect(x + cellSize * 0.7, y + cellSize * 0.7, cellSize * 0.3, cellSize * 0.3);
+      const durability = placement.durability?.[`${cell.x},${cell.y}`] ?? 3;
+      if (durability < 3) {
+        context.strokeStyle = durability === 1 ? '#e75f2a' : '#12161b';
+        context.lineWidth = 2;
+        context.beginPath();
+        context.moveTo(x + cellSize * 0.2, y + cellSize * 0.15);
+        context.lineTo(x + cellSize * 0.65, y + cellSize * 0.55);
+        context.lineTo(x + cellSize * 0.4, y + cellSize * 0.85);
+        context.stroke();
+        context.strokeStyle = selected || hovered ? '#fff04a' : '#12161b';
+      }
       context.fillStyle = PLAYER_COLORS[placement.ownerId];
     }
     context.restore();

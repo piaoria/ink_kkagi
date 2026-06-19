@@ -14,14 +14,15 @@ export const DRAWING_CONFIG = Object.freeze({
 });
 
 export const PLACEMENT_CONFIG = Object.freeze({
-  BOARD_COLUMNS: 14,
-  BOARD_ROWS: 20,
-  HOME_ROWS: 10,
+  BOARD_COLUMNS: 28,
+  BOARD_ROWS: 28,
+  HOME_ROWS: 8,
   ROTATIONS: [0, 90, 180, 270],
 });
 
 export const MATCH_RENDER_CONFIG = Object.freeze({
   FINE_GRID_SCALE: 4,
+  BLOCK_DURABILITY: 3,
 });
 
 export const PLAYER_COLORS = Object.freeze({

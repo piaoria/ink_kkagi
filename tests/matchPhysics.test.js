@@ -134,7 +134,7 @@ describe('match physics', () => {
   it('removes a piece when every part leaves the board', () => {
     const result = simulateLaunch({
       playerPlacements: {
-        1: [makePlacement('p1-piece-1', 1, [{ x: 13, y: 5 }])],
+        1: [makePlacement('p1-piece-1', 1, [{ x: 27, y: 5 }])],
         2: [],
       },
       selectedPieceId: 'p1-piece-1',

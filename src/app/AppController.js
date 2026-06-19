@@ -305,8 +305,8 @@ export class AppController {
       playerPlacements: this.playerPlacements,
       selectedPieceId: this.matchState.selectedPieceId,
       aimVector: this.matchState.aimVector,
-      stepCount: 60,
-      frameCount: 60,
+      stepCount: 48,
+      frameCount: 32,
     });
 
     this.matchState = {

@@ -3,6 +3,7 @@ import { PLACEMENT_CONFIG } from '../config/gameConfig.js';
 import { PHYSICS_CONFIG } from '../config/physicsConfig.js';
 import { getLaunchVector } from '../match/aiming.js';
 import { getPlacementPose } from '../match/boardOccupancy.js';
+import { applyImpactDamage } from '../match/pieceDamage.js';
 
 const CELL_HALF_SIZE = 0.38;
 
@@ -38,6 +39,7 @@ export function simulateLaunch({
 
   const frames = [];
   const impacts = [];
+  const damagedPairs = new Set();
   let capturedImpactCount = 0;
   const captureEvery = frameCount > 0 ? Math.max(1, Math.floor(stepCount / frameCount)) : 0;
 
@@ -51,6 +53,12 @@ export function simulateLaunch({
       return;
     }
 
+    const pairKey = [firstPiece, secondPiece].sort().join(':');
+    if (damagedPairs.has(pairKey)) {
+      return;
+    }
+    damagedPairs.add(pairKey);
+
     const firstPosition = firstBody.getPosition();
     const secondPosition = secondBody.getPosition();
     const firstVelocity = firstBody.getLinearVelocity();
@@ -63,6 +71,7 @@ export function simulateLaunch({
       x: (firstPosition.x + secondPosition.x) / 2,
       y: (firstPosition.y + secondPosition.y) / 2,
       strength: Math.min(1, relativeSpeed / 12),
+      pieceIds: [firstPiece, secondPiece],
     });
   });
 
@@ -78,9 +87,13 @@ export function simulateLaunch({
   }
 
   const result = projectWorldToPlacements(worldState, playerPlacements, boardConfig);
+  const damage = applyImpactDamage(result.playerPlacements, impacts);
 
   return {
     ...result,
+    playerPlacements: damage.playerPlacements,
+    knockedOutPieceIds: [...result.knockedOutPieceIds, ...damage.destroyedPieceIds],
+    fragmentedPieceIds: damage.fragmentedPieceIds,
     frames,
     impacts: impacts.slice(capturedImpactCount),
   };
@@ -144,10 +157,9 @@ function projectWorldToPlacements(worldState, originalPlacements, boardConfig) {
   for (const ownerId of [1, 2]) {
     for (const placement of originalPlacements[ownerId] ?? []) {
       const body = worldState.bodiesByPieceId.get(placement.pieceId);
-      const localCells = worldState.localCellsByPieceId.get(placement.pieceId);
       const center = worldState.centersByPieceId.get(placement.pieceId);
 
-      if (isBodyOutsideBoard(body, localCells, boardConfig)) {
+      if (isCenterOutsideBoard(body, boardConfig)) {
         knockedOutPieceIds.push(placement.pieceId);
         continue;
       }
@@ -170,17 +182,15 @@ function projectWorldToPlacements(worldState, originalPlacements, boardConfig) {
   };
 }
 
-function isBodyOutsideBoard(body, localCells, boardConfig) {
-  return localCells.every((localCell) => {
-    const point = body.getWorldPoint(planck.Vec2(localCell.x, localCell.y));
+function isCenterOutsideBoard(body, boardConfig) {
+  const position = body.getPosition();
 
-    return (
-      point.x < 0 ||
-      point.x >= boardConfig.BOARD_COLUMNS ||
-      point.y < 0 ||
-      point.y >= boardConfig.BOARD_ROWS
-    );
-  });
+  return (
+    position.x < -0.5 ||
+    position.x > boardConfig.BOARD_COLUMNS - 0.5 ||
+    position.y < -0.5 ||
+    position.y > boardConfig.BOARD_ROWS - 0.5
+  );
 }
 
 function getCentroid(cells) {
