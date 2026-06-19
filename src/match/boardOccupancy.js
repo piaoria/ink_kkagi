@@ -55,10 +55,19 @@ export function getPieceCenter(playerPlacements, pieceId) {
     }),
     { x: 0, y: 0 },
   );
+  const pose = getPlacementPose(placement);
 
   return {
-    x: total.x / placement.occupiedCells.length,
-    y: total.y / placement.occupiedCells.length,
+    x: total.x / placement.occupiedCells.length + pose.x,
+    y: total.y / placement.occupiedCells.length + pose.y,
+  };
+}
+
+export function getPlacementPose(placement) {
+  return {
+    x: placement.pose?.x ?? 0,
+    y: placement.pose?.y ?? 0,
+    angle: placement.pose?.angle ?? 0,
   };
 }
 

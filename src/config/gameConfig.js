@@ -20,6 +20,10 @@ export const PLACEMENT_CONFIG = Object.freeze({
   ROTATIONS: [0, 90, 180, 270],
 });
 
+export const MATCH_RENDER_CONFIG = Object.freeze({
+  FINE_GRID_SCALE: 4,
+});
+
 export const PLAYER_COLORS = Object.freeze({
   1: '#1677c7',
   2: '#e75f2a',

@@ -2,6 +2,7 @@ import * as planck from 'planck';
 import { PLACEMENT_CONFIG } from '../config/gameConfig.js';
 import { PHYSICS_CONFIG } from '../config/physicsConfig.js';
 import { getLaunchVector } from '../match/aiming.js';
+import { getPlacementPose } from '../match/boardOccupancy.js';
 
 const CELL_HALF_SIZE = 0.46;
 
@@ -60,13 +61,16 @@ export function createWorldFromPlacements(playerPlacements, config = PHYSICS_CON
   });
   const bodiesByPieceId = new Map();
   const localCellsByPieceId = new Map();
+  const centersByPieceId = new Map();
 
   for (const ownerId of [1, 2]) {
     for (const placement of playerPlacements[ownerId] ?? []) {
       const centroid = getCentroid(placement.occupiedCells);
+      const pose = getPlacementPose(placement);
       const body = world.createBody({
         type: 'dynamic',
-        position: planck.Vec2(centroid.x, centroid.y),
+        position: planck.Vec2(centroid.x + pose.x, centroid.y + pose.y),
+        angle: pose.angle,
         linearDamping: config.LINEAR_DAMPING,
         angularDamping: config.ANGULAR_DAMPING,
       });
@@ -86,6 +90,7 @@ export function createWorldFromPlacements(playerPlacements, config = PHYSICS_CON
 
       bodiesByPieceId.set(placement.pieceId, body);
       localCellsByPieceId.set(placement.pieceId, localCells);
+      centersByPieceId.set(placement.pieceId, centroid);
     }
   }
 
@@ -93,6 +98,7 @@ export function createWorldFromPlacements(playerPlacements, config = PHYSICS_CON
     world,
     bodiesByPieceId,
     localCellsByPieceId,
+    centersByPieceId,
   };
 }
 
@@ -107,30 +113,21 @@ function projectWorldToPlacements(worldState, originalPlacements, boardConfig) {
     for (const placement of originalPlacements[ownerId] ?? []) {
       const body = worldState.bodiesByPieceId.get(placement.pieceId);
       const localCells = worldState.localCellsByPieceId.get(placement.pieceId);
-      const projectedCells = localCells.map((localCell) => {
-        const worldPoint = body.getWorldPoint(planck.Vec2(localCell.x, localCell.y));
+      const center = worldState.centersByPieceId.get(placement.pieceId);
 
-        return {
-          x: Math.round(worldPoint.x),
-          y: Math.round(worldPoint.y),
-        };
-      });
-
-      if (projectedCells.every((cell) => isOutsideBoard(cell, boardConfig))) {
+      if (isBodyOutsideBoard(body, localCells, boardConfig)) {
         knockedOutPieceIds.push(placement.pieceId);
         continue;
       }
 
-      const occupiedCells = snapPieceToBoard({
-        placement,
-        bodyPosition: body.getPosition(),
-        boardConfig,
-      });
-
+      const bodyPosition = body.getPosition();
       nextPlacements[ownerId].push({
         ...placement,
-        anchor: occupiedCells[0],
-        occupiedCells,
+        pose: {
+          x: bodyPosition.x - center.x,
+          y: bodyPosition.y - center.y,
+          angle: body.getAngle(),
+        },
       });
     }
   }
@@ -141,18 +138,17 @@ function projectWorldToPlacements(worldState, originalPlacements, boardConfig) {
   };
 }
 
-export function snapPieceToBoard({ placement, bodyPosition, boardConfig = PLACEMENT_CONFIG }) {
-  const originalCenter = getCentroid(placement.occupiedCells);
-  const requestedOffset = {
-    x: Math.round(bodyPosition.x - originalCenter.x),
-    y: Math.round(bodyPosition.y - originalCenter.y),
-  };
-  const boundedOffset = clampOffsetToBoard(placement.occupiedCells, requestedOffset, boardConfig);
+function isBodyOutsideBoard(body, localCells, boardConfig) {
+  return localCells.every((localCell) => {
+    const point = body.getWorldPoint(planck.Vec2(localCell.x, localCell.y));
 
-  return placement.occupiedCells.map((cell) => ({
-    x: cell.x + boundedOffset.x,
-    y: cell.y + boundedOffset.y,
-  }));
+    return (
+      point.x < 0 ||
+      point.x >= boardConfig.BOARD_COLUMNS ||
+      point.y < 0 ||
+      point.y >= boardConfig.BOARD_ROWS
+    );
+  });
 }
 
 function getCentroid(cells) {
@@ -168,38 +164,4 @@ function getCentroid(cells) {
     x: total.x / cells.length,
     y: total.y / cells.length,
   };
-}
-
-function clampOffsetToBoard(cells, offset, boardConfig) {
-  const bounds = getBounds(cells);
-
-  return {
-    x: clamp(offset.x, -bounds.minX, boardConfig.BOARD_COLUMNS - 1 - bounds.maxX),
-    y: clamp(offset.y, -bounds.minY, boardConfig.BOARD_ROWS - 1 - bounds.maxY),
-  };
-}
-
-function getBounds(cells) {
-  return cells.reduce(
-    (bounds, cell) => ({
-      minX: Math.min(bounds.minX, cell.x),
-      maxX: Math.max(bounds.maxX, cell.x),
-      minY: Math.min(bounds.minY, cell.y),
-      maxY: Math.max(bounds.maxY, cell.y),
-    }),
-    {
-      minX: Infinity,
-      maxX: -Infinity,
-      minY: Infinity,
-      maxY: -Infinity,
-    },
-  );
-}
-
-function clamp(value, minimum, maximum) {
-  return Math.min(Math.max(value, minimum), maximum);
-}
-
-function isOutsideBoard({ x, y }, boardConfig) {
-  return x < 0 || x >= boardConfig.BOARD_COLUMNS || y < 0 || y >= boardConfig.BOARD_ROWS;
 }

@@ -1,9 +1,8 @@
 import { PHYSICS_CONFIG } from '../config/physicsConfig.js';
-import { PLACEMENT_CONFIG, PLAYER_COLORS } from '../config/gameConfig.js';
-import { toCellKey } from '../drawing/drawingValidation.js';
+import { MATCH_RENDER_CONFIG, PLACEMENT_CONFIG, PLAYER_COLORS } from '../config/gameConfig.js';
 import {
-  buildBoardOccupancy,
   getActivePieces,
+  getPlacementPose,
   getPieceCenterPercent,
 } from '../match/boardOccupancy.js';
 import {
@@ -14,22 +13,6 @@ import {
   isLaunchReady,
 } from '../match/aiming.js';
 
-/**
- * @param {{
- *   activePlayerId: 1 | 2,
- *   selectedPieceId: string | null,
- *   aimVector: { x: number, y: number },
- *   lastKnockedOutPieceIds: string[],
- *   playerPieces: Record<1 | 2, { id: string, pixelCount: number }[]>,
- *   playerPlacements: Record<1 | 2, { pieceId: string, ownerId: 1 | 2, occupiedCells: { x: number, y: number }[] }[]>,
- *   isSimulating?: boolean,
- *   onSelectPiece: (pieceId: string) => void,
- *   onAimChange: (vector: { x: number, y: number }) => void,
- *   onFire: () => void,
- *   onBackToTitle: () => void,
- * }} params
- * @returns {HTMLElement}
- */
 export function renderMatchScreen({
   activePlayerId,
   selectedPieceId,
@@ -49,33 +32,36 @@ export function renderMatchScreen({
 
   const header = document.createElement('header');
   header.className = 'drawing-header';
-
   const titleGroup = document.createElement('div');
   const eyebrow = document.createElement('p');
   eyebrow.className = 'screen-eyebrow';
   eyebrow.textContent = `PLAYER ${activePlayerId} TURN`;
-
   const title = document.createElement('h1');
   title.className = 'pixel-title';
-  title.textContent = '경기';
-
+  title.textContent = '대전';
   titleGroup.append(eyebrow, title);
 
   const backButton = document.createElement('button');
   backButton.className = 'secondary-action';
   backButton.type = 'button';
-  backButton.textContent = '메인';
+  backButton.textContent = '나가기';
   backButton.addEventListener('click', onBackToTitle);
-
   header.append(titleGroup, backButton);
 
   const layout = document.createElement('section');
   layout.className = 'placement-layout match-layout';
-
   const board = document.createElement('div');
   board.className = 'placement-board match-board';
   board.style.setProperty('--board-columns', PLACEMENT_CONFIG.BOARD_COLUMNS);
   board.style.setProperty('--board-rows', PLACEMENT_CONFIG.BOARD_ROWS);
+  board.style.setProperty(
+    '--fine-grid-columns',
+    PLACEMENT_CONFIG.BOARD_COLUMNS * MATCH_RENDER_CONFIG.FINE_GRID_SCALE,
+  );
+  board.style.setProperty(
+    '--fine-grid-rows',
+    PLACEMENT_CONFIG.BOARD_ROWS * MATCH_RENDER_CONFIG.FINE_GRID_SCALE,
+  );
   board.setAttribute('aria-label', '경기 보드');
 
   let dragStart = null;
@@ -103,11 +89,7 @@ export function renderMatchScreen({
       !isSimulating && selectedPieceId && isLaunchReady(currentAimVector)
         ? 'validation-message is-valid'
         : 'validation-message';
-    status.textContent = getStatusText({
-      selectedPieceId,
-      aimVector: currentAimVector,
-      isSimulating,
-    });
+    status.textContent = getStatusText({ selectedPieceId, aimVector: currentAimVector, isSimulating });
   };
 
   const syncAimFromPointer = (event) => {
@@ -132,58 +114,37 @@ export function renderMatchScreen({
     }
 
     event.preventDefault();
-    dragStart = {
-      x: event.clientX,
-      y: event.clientY,
-    };
+    dragStart = { x: event.clientX, y: event.clientY };
     currentAimVector = { x: 0, y: 0 };
     board.setPointerCapture(event.pointerId);
     onAimChange(currentAimVector);
     syncAimControls();
   });
-
   board.addEventListener('pointermove', (event) => {
     if (dragStart) {
       event.preventDefault();
       syncAimFromPointer(event);
     }
   });
-
-  const endAimDrag = () => {
+  board.addEventListener('pointerup', () => {
     dragStart = null;
-  };
+  });
+  board.addEventListener('pointercancel', () => {
+    dragStart = null;
+  });
 
-  board.addEventListener('pointerup', endAimDrag);
-  board.addEventListener('pointercancel', endAimDrag);
-
-  const occupancy = buildBoardOccupancy(playerPlacements);
   const aimOrigin = getPieceCenterPercent(playerPlacements, selectedPieceId, PLACEMENT_CONFIG);
-
-  for (let y = 0; y < PLACEMENT_CONFIG.BOARD_ROWS; y += 1) {
-    for (let x = 0; x < PLACEMENT_CONFIG.BOARD_COLUMNS; x += 1) {
-      const key = toCellKey({ x, y });
-      const occupant = occupancy.get(key);
-      const cell = document.createElement('button');
-      cell.className = 'placement-cell match-cell';
-      cell.type = 'button';
-      cell.disabled = isSimulating || !occupant || occupant.ownerId !== activePlayerId;
-      cell.classList.toggle('is-placed', Boolean(occupant));
-      cell.classList.toggle('is-active-player', occupant?.ownerId === activePlayerId);
-      cell.classList.toggle('is-selected', occupant?.pieceId === selectedPieceId);
-      cell.style.setProperty(
-        '--cell-ink',
-        occupant ? PLAYER_COLORS[occupant.ownerId] : PLAYER_COLORS[activePlayerId],
+  for (const ownerId of [1, 2]) {
+    for (const placement of playerPlacements[ownerId] ?? []) {
+      board.append(
+        renderMatchPiece({
+          placement,
+          selectedPieceId,
+          activePlayerId,
+          isSimulating,
+          onSelectPiece,
+        }),
       );
-      cell.setAttribute('aria-label', `${x + 1}열 ${y + 1}행`);
-
-      if (!isSimulating && occupant?.ownerId === activePlayerId) {
-        cell.addEventListener('click', (event) => {
-          event.stopPropagation();
-          onSelectPiece(occupant.pieceId);
-        });
-      }
-
-      board.append(cell);
     }
   }
 
@@ -196,19 +157,11 @@ export function renderMatchScreen({
 
   const panel = document.createElement('aside');
   panel.className = 'drawing-panel placement-panel';
-
-  const turnLabel = document.createElement('p');
-  turnLabel.className = 'panel-label';
-  turnLabel.textContent = '현재 턴';
-
+  const turnLabel = createPanelLabel('현재 턴');
   const turnValue = document.createElement('strong');
   turnValue.className = 'ink-count';
   turnValue.textContent = `${activePlayerId}P`;
-
-  const piecesLabel = document.createElement('p');
-  piecesLabel.className = 'panel-label';
-  piecesLabel.textContent = '선택할 말';
-
+  const piecesLabel = createPanelLabel('말 선택');
   const pieceList = document.createElement('div');
   pieceList.className = 'placement-piece-list';
 
@@ -218,31 +171,23 @@ export function renderMatchScreen({
     button.classList.toggle('is-active', piece.id === selectedPieceId);
     button.type = 'button';
     button.disabled = isSimulating;
-    button.textContent = `${piece.id.split('-').at(-1)}번 ${piece.pixelCount}칸`;
+    button.textContent = `${piece.id.split('-').at(-1)}번 말 / ${piece.pixelCount}칸`;
     button.addEventListener('click', () => onSelectPiece(piece.id));
     pieceList.append(button);
   }
 
-  const powerLabel = document.createElement('p');
-  powerLabel.className = 'panel-label';
-  powerLabel.textContent = '발사 세기';
-
+  const powerLabel = createPanelLabel('발사 세기');
   powerValue = document.createElement('strong');
   powerValue.className = 'ink-count';
-
   fireButton = document.createElement('button');
   fireButton.className = 'primary-action';
   fireButton.type = 'button';
   fireButton.textContent = '발사';
   fireButton.addEventListener('click', onFire);
-
   status = document.createElement('p');
-
   const lastResult = document.createElement('p');
   lastResult.className =
-    lastKnockedOutPieceIds.length > 0
-      ? 'validation-message is-valid'
-      : 'validation-message';
+    lastKnockedOutPieceIds.length > 0 ? 'validation-message is-valid' : 'validation-message';
   lastResult.textContent =
     lastKnockedOutPieceIds.length > 0
       ? `낙장: ${lastKnockedOutPieceIds.join(', ')}`
@@ -261,15 +206,70 @@ export function renderMatchScreen({
   );
   layout.append(board, panel);
   screen.append(header, layout);
-
   syncAimControls();
 
   return screen;
 }
 
+function renderMatchPiece({
+  placement,
+  selectedPieceId,
+  activePlayerId,
+  isSimulating,
+  onSelectPiece,
+}) {
+  const originalCenter = getOriginalCenter(placement.occupiedCells);
+  const pose = getPlacementPose(placement);
+  const piece = document.createElement('div');
+  piece.className = 'match-piece';
+  piece.classList.toggle('is-selected', placement.pieceId === selectedPieceId);
+  piece.classList.toggle('is-active-player', placement.ownerId === activePlayerId);
+  piece.style.setProperty('--piece-ink', PLAYER_COLORS[placement.ownerId]);
+  piece.style.left = `${((originalCenter.x + pose.x + 0.5) / PLACEMENT_CONFIG.BOARD_COLUMNS) * 100}%`;
+  piece.style.top = `${((originalCenter.y + pose.y + 0.5) / PLACEMENT_CONFIG.BOARD_ROWS) * 100}%`;
+  piece.style.transform = `translate(-50%, -50%) rotate(${pose.angle}rad)`;
+  piece.setAttribute('aria-label', `${placement.ownerId}P 말`);
+
+  if (!isSimulating && placement.ownerId === activePlayerId) {
+    piece.addEventListener('pointerdown', (event) => {
+      event.stopPropagation();
+      onSelectPiece(placement.pieceId);
+    });
+  }
+
+  for (const cell of placement.occupiedCells) {
+    const inkCell = document.createElement('span');
+    inkCell.className = 'match-ink-cell';
+    inkCell.style.left = `${(cell.x - originalCenter.x - 0.5) * 100}%`;
+    inkCell.style.top = `${(cell.y - originalCenter.y - 0.5) * 100}%`;
+    piece.append(inkCell);
+  }
+
+  return piece;
+}
+
+function createPanelLabel(text) {
+  const label = document.createElement('p');
+  label.className = 'panel-label';
+  label.textContent = text;
+  return label;
+}
+
+function getOriginalCenter(cells) {
+  const total = cells.reduce(
+    (sum, cell) => ({ x: sum.x + cell.x, y: sum.y + cell.y }),
+    { x: 0, y: 0 },
+  );
+
+  return {
+    x: total.x / cells.length,
+    y: total.y / cells.length,
+  };
+}
+
 function getStatusText({ selectedPieceId, aimVector, isSimulating }) {
   if (isSimulating) {
-    return 'SHOT IN MOTION';
+    return '발사 결과 계산 중';
   }
 
   if (!selectedPieceId) {
@@ -277,8 +277,8 @@ function getStatusText({ selectedPieceId, aimVector, isSimulating }) {
   }
 
   if (!isLaunchReady(aimVector)) {
-    return '보드 위에서 뒤로 끌어당겨 방향과 세기를 정해 주세요.';
+    return '보드 위에서 반대 방향으로 끌어 발사 방향과 세기를 정해 주세요.';
   }
 
-  return '발사 준비 완료. 버튼을 누르면 다음 물리 단계로 넘깁니다.';
+  return '발사 준비 완료.';
 }

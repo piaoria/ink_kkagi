@@ -4,6 +4,7 @@ import {
   getActivePieces,
   getPieceCenter,
   getPieceCenterPercent,
+  getPlacementPose,
 } from '../src/match/boardOccupancy.js';
 
 describe('board occupancy', () => {
@@ -71,5 +72,18 @@ describe('board occupancy', () => {
         BOARD_ROWS: 10,
       }),
     ).toEqual({ x: 25, y: 25 });
+  });
+
+  it('includes a match pose when calculating a piece center', () => {
+    const placement = {
+      pieceId: 'p1-piece-1',
+      ownerId: 1,
+      occupiedCells: [{ x: 2, y: 2 }],
+      pose: { x: 1.25, y: -0.5, angle: 0.3 },
+    };
+    const placements = { 1: [placement], 2: [] };
+
+    expect(getPlacementPose(placement)).toEqual({ x: 1.25, y: -0.5, angle: 0.3 });
+    expect(getPieceCenter(placements, 'p1-piece-1')).toEqual({ x: 3.25, y: 1.5 });
   });
 });
