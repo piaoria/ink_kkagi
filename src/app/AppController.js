@@ -3,7 +3,9 @@ import { PLAYER_COLORS } from '../config/gameConfig.js';
 import { renderDrawingScreen } from '../screens/DrawingScreen.js';
 import { renderMainScreen } from '../screens/MainScreen.js';
 import { renderMatchScreen } from '../screens/MatchScreen.js';
+import { renderMatchOverScreen } from '../screens/MatchOverScreen.js';
 import { renderMatchReadyScreen, renderPlacementScreen } from '../screens/PlacementScreen.js';
+import { getMatchResult } from '../match/matchRules.js';
 import { simulateLaunch } from '../physics/matchPhysics.js';
 import { createAutoPlacementsForPlayer, createQuickMatchSetup } from '../setup/quickSetup.js';
 
@@ -35,6 +37,7 @@ export class AppController {
       selectedPieceId: null,
       aimVector: { x: 0, y: 0 },
       lastKnockedOutPieceIds: [],
+      result: null,
     };
   }
 
@@ -114,6 +117,18 @@ export class AppController {
       return;
     }
 
+    if (this.stateMachine.phase === GamePhase.MATCH_OVER) {
+      this.root.replaceChildren(
+        renderMatchOverScreen({
+          result: this.matchState.result,
+          playerPlacements: this.playerPlacements,
+          onQuickRestart: () => this.restartQuickMatch(),
+          onBackToTitle: () => this.returnToTitle(),
+        }),
+      );
+      return;
+    }
+
     this.root.replaceChildren(
       renderMainScreen({
         onStartLocal: () => this.startLocalMatchSetup(),
@@ -166,6 +181,7 @@ export class AppController {
       selectedPieceId: null,
       aimVector: { x: 0, y: 0 },
       lastKnockedOutPieceIds: [],
+      result: null,
     };
     this.render();
   }
@@ -238,6 +254,7 @@ export class AppController {
       selectedPieceId: null,
       aimVector: { x: 0, y: 0 },
       lastKnockedOutPieceIds: [],
+      result: null,
     };
     this.stateMachine.transition(GamePhase.AIMING);
     this.render();
@@ -249,6 +266,7 @@ export class AppController {
       selectedPieceId: pieceId,
       aimVector: { x: 0, y: 0 },
       lastKnockedOutPieceIds: [],
+      result: null,
     };
     this.render();
   }
@@ -273,13 +291,26 @@ export class AppController {
     });
 
     this.playerPlacements = simulation.playerPlacements;
+    const result = getMatchResult(this.playerPlacements);
     this.matchState = {
       activePlayerId: this.matchState.activePlayerId === 1 ? 2 : 1,
       selectedPieceId: null,
       aimVector: { x: 0, y: 0 },
       lastKnockedOutPieceIds: simulation.knockedOutPieceIds,
+      result,
     };
-    this.stateMachine.transition(GamePhase.AIMING);
+
+    if (result.finished) {
+      this.stateMachine.transition(GamePhase.MATCH_OVER);
+    } else {
+      this.stateMachine.transition(GamePhase.AIMING);
+    }
+
     this.render();
+  }
+
+  restartQuickMatch() {
+    this.returnToTitle();
+    this.startQuickLocalMatchSetup();
   }
 }
