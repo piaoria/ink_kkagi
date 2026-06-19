@@ -26,9 +26,11 @@ export function simulateLaunch({
   }
 
   const launch = getLaunchVector(aimVector, config.MAX_DRAG_DISTANCE);
+  const launchSpeed = launch.power * config.MAX_LAUNCH_SPEED;
+  const launchMass = launchBody.getMass();
   const impulse = planck.Vec2(
-    launch.x * launch.power * config.MAX_IMPULSE,
-    launch.y * launch.power * config.MAX_IMPULSE,
+    launch.x * launchSpeed * launchMass,
+    launch.y * launchSpeed * launchMass,
   );
 
   launchBody.applyLinearImpulse(impulse, launchBody.getWorldCenter(), true);

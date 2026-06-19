@@ -24,6 +24,43 @@ describe('match physics', () => {
     expect(result.playerPlacements[1][0].occupiedCells[0].x).toBeGreaterThan(4);
   });
 
+  it('gives small and large pieces comparable launch distance at the same power', () => {
+    const smallResult = simulateLaunch({
+      playerPlacements: {
+        1: [makePlacement('small', 1, [{ x: 2, y: 4 }])],
+        2: [],
+      },
+      selectedPieceId: 'small',
+      aimVector: { x: -180, y: 0 },
+      stepCount: 30,
+    });
+    const largeResult = simulateLaunch({
+      playerPlacements: {
+        1: [
+          makePlacement('large', 1, [
+            { x: 2, y: 4 },
+            { x: 3, y: 4 },
+            { x: 4, y: 4 },
+            { x: 5, y: 4 },
+            { x: 6, y: 4 },
+            { x: 7, y: 4 },
+            { x: 8, y: 4 },
+          ]),
+        ],
+        2: [],
+      },
+      selectedPieceId: 'large',
+      aimVector: { x: -180, y: 0 },
+      stepCount: 30,
+    });
+
+    const smallDistance = smallResult.playerPlacements[1][0].occupiedCells[0].x - 2;
+    const largeDistance = largeResult.playerPlacements[1][0].occupiedCells[0].x - 2;
+
+    expect(smallDistance).toBeGreaterThan(2);
+    expect(largeDistance).toBe(smallDistance);
+  });
+
   it('captures replay frames when requested', () => {
     const result = simulateLaunch({
       playerPlacements: {
