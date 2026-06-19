@@ -223,6 +223,19 @@
   box-shadow: inset -4px -4px 0 rgba(18, 22, 27, 0.28);
 }
 
+.match-cell:disabled {
+  cursor: default;
+}
+
+.match-cell.is-active-player {
+  cursor: pointer;
+}
+
+.match-cell.is-selected {
+  outline: 4px solid var(--paper-hot);
+  outline-offset: -2px;
+}
+
 .placement-board.is-readonly .placement-cell {
   cursor: default;
 }

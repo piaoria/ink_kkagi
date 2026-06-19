@@ -2,6 +2,7 @@ import { GamePhase, GameStateMachine } from './GameStateMachine.js';
 import { PLAYER_COLORS } from '../config/gameConfig.js';
 import { renderDrawingScreen } from '../screens/DrawingScreen.js';
 import { renderMainScreen } from '../screens/MainScreen.js';
+import { renderMatchScreen } from '../screens/MatchScreen.js';
 import { renderMatchReadyScreen, renderPlacementScreen } from '../screens/PlacementScreen.js';
 import { createAutoPlacementsForPlayer, createQuickMatchSetup } from '../setup/quickSetup.js';
 
@@ -27,6 +28,10 @@ export class AppController {
     this.playerPlacements = {
       1: [],
       2: [],
+    };
+    this.matchState = {
+      activePlayerId: 1,
+      selectedPieceId: null,
     };
   }
 
@@ -81,6 +86,21 @@ export class AppController {
         renderMatchReadyScreen({
           playerPieces: this.playerPieces,
           playerPlacements: this.playerPlacements,
+          onStartMatch: () => this.startMatch(),
+          onBackToTitle: () => this.returnToTitle(),
+        }),
+      );
+      return;
+    }
+
+    if (this.stateMachine.phase === GamePhase.AIMING) {
+      this.root.replaceChildren(
+        renderMatchScreen({
+          activePlayerId: this.matchState.activePlayerId,
+          selectedPieceId: this.matchState.selectedPieceId,
+          playerPieces: this.playerPieces,
+          playerPlacements: this.playerPlacements,
+          onSelectPiece: (pieceId) => this.selectMatchPiece(pieceId),
           onBackToTitle: () => this.returnToTitle(),
         }),
       );
@@ -133,6 +153,10 @@ export class AppController {
     this.playerPlacements = {
       1: [],
       2: [],
+    };
+    this.matchState = {
+      activePlayerId: 1,
+      selectedPieceId: null,
     };
     this.render();
   }
@@ -192,6 +216,27 @@ export class AppController {
       this.stateMachine.transition(GamePhase.READY);
     }
 
+    this.render();
+  }
+
+  startMatch() {
+    if (this.stateMachine.phase !== GamePhase.READY) {
+      return;
+    }
+
+    this.matchState = {
+      activePlayerId: 1,
+      selectedPieceId: null,
+    };
+    this.stateMachine.transition(GamePhase.AIMING);
+    this.render();
+  }
+
+  selectMatchPiece(pieceId) {
+    this.matchState = {
+      ...this.matchState,
+      selectedPieceId: pieceId,
+    };
     this.render();
   }
 }

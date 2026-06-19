@@ -249,11 +249,17 @@ export function renderPlacementScreen({
  * @param {{
  *   playerPieces: Record<1 | 2, { id: string, pixelCount: number }[]>,
  *   playerPlacements: Record<1 | 2, { ownerId: 1 | 2, occupiedCells: { x: number, y: number }[] }[]>,
+ *   onStartMatch: () => void,
  *   onBackToTitle: () => void,
  * }} params
  * @returns {HTMLElement}
  */
-export function renderMatchReadyScreen({ playerPieces, playerPlacements, onBackToTitle }) {
+export function renderMatchReadyScreen({
+  playerPieces,
+  playerPlacements,
+  onStartMatch,
+  onBackToTitle,
+}) {
   const screen = document.createElement('main');
   screen.className = 'screen drawing-screen';
 
@@ -277,7 +283,17 @@ export function renderMatchReadyScreen({ playerPieces, playerPlacements, onBackT
   backButton.textContent = '메인';
   backButton.addEventListener('click', onBackToTitle);
 
-  header.append(titleGroup, backButton);
+  const startButton = document.createElement('button');
+  startButton.className = 'primary-action';
+  startButton.type = 'button';
+  startButton.textContent = '경기 시작';
+  startButton.addEventListener('click', onStartMatch);
+
+  const headerActions = document.createElement('div');
+  headerActions.className = 'title-actions';
+  headerActions.append(startButton, backButton);
+
+  header.append(titleGroup, headerActions);
 
   const layout = document.createElement('section');
   layout.className = 'placement-layout';
