@@ -57,6 +57,7 @@
   background: #f5f6f7;
   cursor: crosshair;
   touch-action: none;
+  user-select: none;
 }
 
 .drawing-cell.is-inked {
@@ -111,6 +112,7 @@
 
 .tool-mode-button {
   cursor: pointer;
+  user-select: none;
 }
 
 .tool-mode-button.is-active {
@@ -195,7 +197,7 @@
   box-shadow:
     10px 10px 0 var(--green-ink),
     18px 18px 0 var(--ink-black);
-  touch-action: manipulation;
+  touch-action: none;
   user-select: none;
 }
 
@@ -206,6 +208,7 @@
   border-radius: 0;
   background: #f5f6f7;
   cursor: pointer;
+  user-select: none;
 }
 
 .placement-cell.is-home {
@@ -271,7 +274,7 @@
 }
 
 .placement-piece-button {
-  min-height: 42px;
+  min-height: 48px;
   padding: 8px 10px;
   border: 3px solid var(--ink-black);
   border-radius: 0;
@@ -279,6 +282,7 @@
   color: var(--ink-black);
   cursor: pointer;
   text-align: left;
+  user-select: none;
 }
 
 .placement-piece-button.is-active {
@@ -299,7 +303,22 @@
   }
 
   .placement-board {
-    gap: 3px;
-    padding: 8px;
+    width: min(100%, calc(100dvh - 260px));
+    min-width: min(100%, 300px);
+    gap: 2px;
+    padding: 6px;
+  }
+
+  .drawing-panel {
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .ink-count {
+    font-size: 34px;
+  }
+
+  .validation-message {
+    min-height: 40px;
   }
 }

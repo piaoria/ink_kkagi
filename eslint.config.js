@@ -12,7 +12,12 @@ export default [
       sourceType: 'module',
       globals: {
         console: 'readonly',
+        caches: 'readonly',
         document: 'readonly',
+        fetch: 'readonly',
+        navigator: 'readonly',
+        self: 'readonly',
+        URL: 'readonly',
         window: 'readonly',
         HTMLElement: 'readonly',
       },
@@ -22,4 +27,3 @@ export default [
     },
   },
 ];
-

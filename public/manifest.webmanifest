@@ -1,0 +1,19 @@
+{
+  "name": "잉까기",
+  "short_name": "잉까기",
+  "description": "직접 그린 픽셀 말을 튕겨 상대 말을 낙장시키는 로컬 1:1 물리 대전 게임",
+  "start_url": "/ink_kkagi/",
+  "scope": "/ink_kkagi/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f2f4f3",
+  "theme_color": "#fff04a",
+  "icons": [
+    {
+      "src": "/ink_kkagi/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

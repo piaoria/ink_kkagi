@@ -33,16 +33,26 @@ body,
   margin: 0;
 }
 
+html {
+  min-height: 100%;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   min-height: 100vh;
+  min-height: 100dvh;
   background:
     linear-gradient(var(--grid-line) 2px, transparent 2px),
     linear-gradient(90deg, var(--grid-line) 2px, transparent 2px), var(--paper);
   background-size: 24px 24px;
   image-rendering: pixelated;
+  overscroll-behavior: none;
 }
 
 button {
   border: 0;
   font: inherit;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
