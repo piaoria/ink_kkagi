@@ -266,6 +266,20 @@
   outline-offset: -4px;
 }
 
+.match-canvas.is-impact {
+  animation: impact-shake 120ms steps(2);
+}
+
+@keyframes impact-shake {
+  25% {
+    transform: translate(3px, -2px);
+  }
+
+  75% {
+    transform: translate(-3px, 2px);
+  }
+}
+
 .match-piece {
   position: absolute;
   z-index: 1;

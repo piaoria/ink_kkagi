@@ -106,6 +106,9 @@ export function createMatchCanvas({ board, state, onSelectPiece, onAimChange, on
     currentState = { ...currentState, ...nextState };
     for (const impact of nextState.impacts ?? []) {
       particles.push({ ...impact, life: 16 });
+      canvas.classList.remove('is-impact');
+      void canvas.offsetWidth;
+      canvas.classList.add('is-impact');
     }
     particles = particles.filter((particle) => particle.life > 0);
     updateCursor();
@@ -185,28 +188,38 @@ export function createMatchCanvas({ board, state, onSelectPiece, onAimChange, on
     const startX = (center.x + pose.x + 0.5) * size.unit;
     const startY = (center.y + pose.y + 0.5) * size.unit;
     const length = Math.hypot(currentState.aimVector.x, currentState.aimVector.y);
-    const endX = startX + launch.x * length;
-    const endY = startY + launch.y * length;
+    const preview = getPreviewEndpoint({
+      startX,
+      startY,
+      launch,
+      selectedPieceId: placement.pieceId,
+      maxDistance: Math.max(length, size.unit * (2 + getAimPower(currentState.aimVector) * 7)),
+    });
     context.strokeStyle = '#fff04a';
     context.lineWidth = 6;
+    context.setLineDash([10, 8]);
     context.beginPath();
     context.moveTo(startX, startY);
-    context.lineTo(endX, endY);
+    context.lineTo(preview.x, preview.y);
     context.stroke();
+    context.setLineDash([]);
+    context.fillStyle = preview.hit ? '#e75f2a' : '#fff04a';
+    context.fillRect(preview.x - 5, preview.y - 5, 10, 10);
   }
 
   function drawParticles() {
     for (const particle of particles) {
       const alpha = particle.life / 16;
       context.fillStyle = `rgba(255, 240, 74, ${alpha})`;
-      for (let index = 0; index < 6; index += 1) {
-        const angle = (Math.PI * 2 * index) / 6;
+      const count = 4 + Math.round((particle.strength ?? 0.5) * 8);
+      for (let index = 0; index < count; index += 1) {
+        const angle = (Math.PI * 2 * index) / count;
         const distance = (16 - particle.life) * 1.7 + 8;
         context.fillRect(
           (particle.x + 0.5) * size.unit + Math.cos(angle) * distance - 2,
           (particle.y + 0.5) * size.unit + Math.sin(angle) * distance - 2,
-          4,
-          4,
+          3 + (particle.strength ?? 0.5) * 3,
+          3 + (particle.strength ?? 0.5) * 3,
         );
       }
       particle.life -= 1;
@@ -221,12 +234,43 @@ export function createMatchCanvas({ board, state, onSelectPiece, onAimChange, on
     };
   }
 
-  function getPieceAtPoint(point) {
+  function getPieceAtPoint(point, ignoredPieceId = null) {
     const pieces = [
       ...(currentState.playerPlacements[2] ?? []),
       ...(currentState.playerPlacements[1] ?? []),
     ];
-    return pieces.find((placement) => isPointInsidePiece(point, placement)) ?? null;
+    return (
+      pieces.find(
+        (placement) => placement.pieceId !== ignoredPieceId && isPointInsidePiece(point, placement),
+      ) ?? null
+    );
+  }
+
+  function getPreviewEndpoint({ startX, startY, launch, selectedPieceId, maxDistance }) {
+    const step = size.unit * 0.16;
+    for (let distance = step; distance <= maxDistance; distance += step) {
+      const x = startX + launch.x * distance;
+      const y = startY + launch.y * distance;
+      const point = { x: x / size.unit, y: y / size.unit };
+      if (
+        point.x < 0 ||
+        point.x > PLACEMENT_CONFIG.BOARD_COLUMNS ||
+        point.y < 0 ||
+        point.y > PLACEMENT_CONFIG.BOARD_ROWS
+      ) {
+        return { x, y, hit: false };
+      }
+
+      if (getPieceAtPoint(point, selectedPieceId)) {
+        return { x, y, hit: true };
+      }
+    }
+
+    return {
+      x: startX + launch.x * maxDistance,
+      y: startY + launch.y * maxDistance,
+      hit: false,
+    };
   }
 
   function isPointInsidePiece(point, placement) {

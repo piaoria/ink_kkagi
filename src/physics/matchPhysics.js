@@ -53,9 +53,16 @@ export function simulateLaunch({
 
     const firstPosition = firstBody.getPosition();
     const secondPosition = secondBody.getPosition();
+    const firstVelocity = firstBody.getLinearVelocity();
+    const secondVelocity = secondBody.getLinearVelocity();
+    const relativeSpeed = Math.hypot(
+      firstVelocity.x - secondVelocity.x,
+      firstVelocity.y - secondVelocity.y,
+    );
     impacts.push({
       x: (firstPosition.x + secondPosition.x) / 2,
       y: (firstPosition.y + secondPosition.y) / 2,
+      strength: Math.min(1, relativeSpeed / 12),
     });
   });
 
@@ -107,7 +114,7 @@ export function createWorldFromPlacements(playerPlacements, config = PHYSICS_CON
       for (const localCell of localCells) {
         body.createFixture({
           shape: planck.Box(CELL_HALF_SIZE, CELL_HALF_SIZE, planck.Vec2(localCell.x, localCell.y), 0),
-          density: 1,
+          density: 1 / localCells.length,
           friction: config.FIXTURE_FRICTION,
           restitution: config.FIXTURE_RESTITUTION,
         });

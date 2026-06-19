@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PHYSICS_CONFIG } from '../src/config/physicsConfig.js';
-import { simulateLaunch } from '../src/physics/matchPhysics.js';
+import { createWorldFromPlacements, simulateLaunch } from '../src/physics/matchPhysics.js';
 
 const makePlacement = (pieceId, ownerId, occupiedCells) => ({
   pieceId,
@@ -60,6 +60,25 @@ describe('match physics', () => {
 
     expect(getPose(smallResult).x).toBeGreaterThan(2);
     expect(getPose(largeResult).x).toBeCloseTo(getPose(smallResult).x, 6);
+  });
+
+  it('normalizes total mass so larger ink shapes do not gain extra impact weight', () => {
+    const worldState = createWorldFromPlacements({
+      1: [makePlacement('small', 1, [{ x: 2, y: 4 }])],
+      2: [
+        makePlacement('large', 2, [
+          { x: 2, y: 10 },
+          { x: 3, y: 10 },
+          { x: 4, y: 10 },
+          { x: 5, y: 10 },
+        ]),
+      ],
+    });
+
+    expect(worldState.bodiesByPieceId.get('small').getMass()).toBeCloseTo(
+      worldState.bodiesByPieceId.get('large').getMass(),
+      6,
+    );
   });
 
   it('keeps diagonal launch coordinates without snapping them to a grid', () => {
