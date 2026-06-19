@@ -41,7 +41,12 @@ export function simulateLaunch({
   const impacts = [];
   const damagedPairs = new Set();
   let capturedImpactCount = 0;
-  const captureEvery = frameCount > 0 ? Math.max(1, Math.floor(stepCount / frameCount)) : 0;
+  const captureEvery = frameCount > 0 ? Math.max(1, Math.ceil(stepCount / frameCount)) : 0;
+  const stableStepsRequired = Math.ceil(
+    config.STOP_STABLE_TIME_MS / (config.FIXED_TIME_STEP * 1000),
+  );
+  let stableSteps = 0;
+  let executedSteps = 0;
 
   worldState.world.on('begin-contact', (contact) => {
     const firstBody = contact.getFixtureA().getBody();
@@ -77,6 +82,9 @@ export function simulateLaunch({
 
   for (let step = 0; step < stepCount; step += 1) {
     worldState.world.step(config.FIXED_TIME_STEP);
+    executedSteps = step + 1;
+
+    stableSteps = isWorldStable(worldState, config) ? stableSteps + 1 : 0;
 
     if (captureEvery > 0 && (step + 1) % captureEvery === 0) {
       const frame = projectWorldToPlacements(worldState, playerPlacements, boardConfig);
@@ -84,9 +92,17 @@ export function simulateLaunch({
       capturedImpactCount = impacts.length;
       frames.push(frame);
     }
+
+    if (stableSteps >= stableStepsRequired) {
+      break;
+    }
   }
 
   const result = projectWorldToPlacements(worldState, playerPlacements, boardConfig);
+  if (frameCount > 0 && executedSteps % captureEvery !== 0) {
+    result.impacts = impacts.slice(capturedImpactCount);
+    frames.push(result);
+  }
   const damage = applyImpactDamage(result.playerPlacements, impacts);
 
   return {
@@ -97,6 +113,16 @@ export function simulateLaunch({
     frames,
     impacts: impacts.slice(capturedImpactCount),
   };
+}
+
+function isWorldStable(worldState, config) {
+  return [...worldState.bodiesByPieceId.values()].every((body) => {
+    const velocity = body.getLinearVelocity();
+    return (
+      Math.hypot(velocity.x, velocity.y) <= config.STOP_LINEAR_SPEED &&
+      Math.abs(body.getAngularVelocity()) <= config.STOP_ANGULAR_SPEED
+    );
+  });
 }
 
 export function createWorldFromPlacements(playerPlacements, config = PHYSICS_CONFIG) {

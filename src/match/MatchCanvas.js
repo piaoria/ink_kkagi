@@ -115,6 +115,7 @@ export function createMatchCanvas({ board, state, onSelectPiece, onAimChange, on
     currentState = { ...currentState, ...nextState };
     for (const impact of nextState.impacts ?? []) {
       particles.push({ ...impact, life: 16 });
+      canvas.style.setProperty('--impact-shake', `${2 + (impact.strength ?? 0.5) * 5}px`);
       canvas.classList.remove('is-impact');
       void canvas.offsetWidth;
       canvas.classList.add('is-impact');
@@ -184,12 +185,16 @@ export function createMatchCanvas({ board, state, onSelectPiece, onAimChange, on
       context.fillRect(x + cellSize * 0.7, y + cellSize * 0.7, cellSize * 0.3, cellSize * 0.3);
       const durability = placement.durability?.[`${cell.x},${cell.y}`] ?? 3;
       if (durability < 3) {
-        context.strokeStyle = durability === 1 ? '#e75f2a' : '#12161b';
-        context.lineWidth = 2;
+        context.fillStyle = durability === 1 ? 'rgba(18, 22, 27, 0.52)' : 'rgba(18, 22, 27, 0.28)';
+        context.fillRect(x, y, cellSize, cellSize);
+        context.strokeStyle = durability === 1 ? '#fff04a' : '#12161b';
+        context.lineWidth = durability === 1 ? 4 : 3;
         context.beginPath();
-        context.moveTo(x + cellSize * 0.2, y + cellSize * 0.15);
-        context.lineTo(x + cellSize * 0.65, y + cellSize * 0.55);
-        context.lineTo(x + cellSize * 0.4, y + cellSize * 0.85);
+        context.moveTo(x + cellSize * 0.15, y + cellSize * 0.1);
+        context.lineTo(x + cellSize * 0.6, y + cellSize * 0.48);
+        context.lineTo(x + cellSize * 0.35, y + cellSize * 0.88);
+        context.moveTo(x + cellSize * 0.6, y + cellSize * 0.48);
+        context.lineTo(x + cellSize * 0.9, y + cellSize * 0.27);
         context.stroke();
         context.strokeStyle = selected || hovered ? '#fff04a' : '#12161b';
       }
@@ -231,10 +236,10 @@ export function createMatchCanvas({ board, state, onSelectPiece, onAimChange, on
     for (const particle of particles) {
       const alpha = particle.life / 16;
       context.fillStyle = `rgba(255, 240, 74, ${alpha})`;
-      const count = 4 + Math.round((particle.strength ?? 0.5) * 8);
+      const count = 6 + Math.round((particle.strength ?? 0.5) * 10);
       for (let index = 0; index < count; index += 1) {
         const angle = (Math.PI * 2 * index) / count;
-        const distance = (16 - particle.life) * 1.7 + 8;
+        const distance = (16 - particle.life) * (2 + (particle.strength ?? 0.5)) + 8;
         context.fillRect(
           (particle.x + 0.5) * size.unit + Math.cos(angle) * distance - 2,
           (particle.y + 0.5) * size.unit + Math.sin(angle) * distance - 2,
