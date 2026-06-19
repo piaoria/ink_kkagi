@@ -49,6 +49,8 @@ export function createMatchCanvas({ board, state, onSelectPiece, onAimChange, on
     }
 
     dragStart = { x: event.clientX, y: event.clientY };
+    currentState = { ...currentState, aimVector: { x: 0, y: 0 } };
+    onAimChange(currentState.aimVector);
     canvas.setPointerCapture(event.pointerId);
     canvas.classList.add('is-dragging');
   });
@@ -71,13 +73,20 @@ export function createMatchCanvas({ board, state, onSelectPiece, onAimChange, on
     draw();
   });
 
-  const stopDrag = () => {
+  const finishDrag = () => {
+    const shouldFire = dragStart && isLaunchReady(currentState.aimVector);
+    dragStart = null;
+    canvas.classList.remove('is-dragging');
+    updateCursor();
+    if (shouldFire) onFire();
+  };
+  const cancelDrag = () => {
     dragStart = null;
     canvas.classList.remove('is-dragging');
     updateCursor();
   };
-  canvas.addEventListener('pointerup', stopDrag);
-  canvas.addEventListener('pointercancel', stopDrag);
+  canvas.addEventListener('pointerup', finishDrag);
+  canvas.addEventListener('pointercancel', cancelDrag);
   canvas.addEventListener('keydown', (event) => {
     if (currentState.isSimulating || !currentState.selectedPieceId) return;
 
