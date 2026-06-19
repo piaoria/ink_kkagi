@@ -1,8 +1,7 @@
-const CACHE_VERSION = 'ink-kkagi-v1';
+const CACHE_VERSION = 'ink-kkagi-v2';
 const APP_SHELL = [
-  '/ink_kkagi/',
   '/ink_kkagi/manifest.webmanifest',
-  '/ink_kkagi/icons/icon.svg'
+  '/ink_kkagi/icons/icon.svg',
 ];
 
 self.addEventListener('install', (event) => {
@@ -29,6 +28,19 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') {
+    return;
+  }
+
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const responseClone = response.clone();
+          caches.open(CACHE_VERSION).then((cache) => cache.put('/ink_kkagi/', responseClone));
+          return response;
+        })
+        .catch(() => caches.match('/ink_kkagi/')),
+    );
     return;
   }
 
