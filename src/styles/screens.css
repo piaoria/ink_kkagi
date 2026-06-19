@@ -8,6 +8,7 @@
 .title-screen {
   display: grid;
   align-items: center;
+  overflow: hidden;
 }
 
 .title-layout {
@@ -23,6 +24,157 @@
   display: grid;
   gap: 18px;
   justify-items: start;
+}
+
+.title-arena {
+  --arena-unit: 5%;
+  position: relative;
+  width: min(100%, 420px);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 5px solid var(--ink-black);
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(to right, rgba(18, 22, 27, 0.14) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(18, 22, 27, 0.14) 1px, transparent 1px);
+  background-size: var(--arena-unit) var(--arena-unit);
+  box-shadow:
+    12px 12px 0 var(--green-ink),
+    20px 20px 0 var(--ink-black);
+  animation: arena-grid-shift 3.2s steps(4) infinite;
+}
+
+.arena-piece {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.arena-piece.is-blue {
+  animation: arena-blue-charge 3.2s steps(12) infinite;
+}
+
+.arena-piece.is-orange {
+  animation: arena-orange-recoil 3.2s steps(12) infinite;
+}
+
+.arena-block {
+  position: absolute;
+  width: calc(var(--arena-unit) * 0.78);
+  height: calc(var(--arena-unit) * 0.78);
+  border: 2px solid var(--ink-black);
+  box-shadow: inset -4px -4px 0 rgba(18, 22, 27, 0.25);
+}
+
+.is-blue .arena-block {
+  background: var(--blue-ink);
+}
+
+.is-orange .arena-block {
+  background: var(--orange-ink);
+}
+
+.arena-impact {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: arena-impact-pulse 3.2s steps(12) infinite;
+}
+
+.arena-impact span {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  left: 51%;
+  top: 49%;
+  border: 2px solid var(--ink-black);
+  background: var(--paper-hot);
+  transform: rotate(calc(var(--index) * 45deg)) translateY(-22px);
+  transform-origin: 0 22px;
+}
+
+.title-start-action {
+  animation: title-action-nudge 2.6s steps(2) infinite;
+}
+
+.title-start-action:hover,
+.title-start-action:focus-visible {
+  animation: none;
+  background: var(--green-ink);
+  color: #ffffff;
+}
+
+@keyframes arena-blue-charge {
+  0%,
+  22% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  43% {
+    transform: translate(31%, -4%) rotate(-8deg);
+  }
+  52% {
+    transform: translate(37%, -5%) rotate(-10deg);
+  }
+  70% {
+    transform: translate(19%, 2%) rotate(5deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+}
+
+@keyframes arena-orange-recoil {
+  0%,
+  40% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  52% {
+    transform: translate(11%, 9%) rotate(14deg);
+  }
+  70% {
+    transform: translate(4%, 3%) rotate(5deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+}
+
+@keyframes arena-impact-pulse {
+  0%,
+  40%,
+  76%,
+  100% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.4);
+  }
+  60% {
+    opacity: 0.35;
+    transform: scale(2.2);
+  }
+}
+
+@keyframes arena-grid-shift {
+  50% {
+    background-position: 5% 5%;
+  }
+}
+
+@keyframes title-action-nudge {
+  0%,
+  76%,
+  100% {
+    transform: translate(0, 0);
+  }
+  84% {
+    transform: translate(-3px, 0);
+  }
+  92% {
+    transform: translate(3px, 0);
+  }
 }
 
 .pixel-logo {
@@ -224,6 +376,12 @@
 
   .board-preview {
     order: -1;
+  }
+
+  .title-arena {
+    order: -1;
+    width: min(100%, 360px);
+    justify-self: center;
   }
 
   .drawing-layout {
