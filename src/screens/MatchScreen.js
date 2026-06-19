@@ -1,18 +1,7 @@
-import { PHYSICS_CONFIG } from '../config/physicsConfig.js';
-import { MATCH_RENDER_CONFIG, PLACEMENT_CONFIG, PLAYER_COLORS } from '../config/gameConfig.js';
-import {
-  getActivePieces,
-  getPlacementPose,
-  getPieceCenterPercent,
-} from '../match/boardOccupancy.js';
-import {
-  clampAimVector,
-  getAimPower,
-  getLaunchVector,
-  getVectorMagnitude,
-  isLaunchReady,
-  setAimPower,
-} from '../match/aiming.js';
+import { MATCH_RENDER_CONFIG, PLACEMENT_CONFIG } from '../config/gameConfig.js';
+import { getActivePieces } from '../match/boardOccupancy.js';
+import { createMatchCanvas } from '../match/MatchCanvas.js';
+import { getAimPower, getVectorMagnitude, isLaunchReady, setAimPower } from '../match/aiming.js';
 
 export function renderMatchScreen({
   activePlayerId,
@@ -22,6 +11,7 @@ export function renderMatchScreen({
   playerPieces,
   playerPlacements,
   isSimulating = false,
+  impacts = [],
   onSelectPiece,
   onAimChange,
   onFire,
@@ -29,8 +19,6 @@ export function renderMatchScreen({
 }) {
   const screen = document.createElement('main');
   screen.className = 'screen drawing-screen';
-  screen.classList.toggle('is-simulating', isSimulating);
-
   const header = document.createElement('header');
   header.className = 'drawing-header';
   const titleGroup = document.createElement('div');
@@ -41,7 +29,6 @@ export function renderMatchScreen({
   title.className = 'pixel-title';
   title.textContent = '대전';
   titleGroup.append(eyebrow, title);
-
   const backButton = document.createElement('button');
   backButton.className = 'secondary-action';
   backButton.type = 'button';
@@ -55,128 +42,36 @@ export function renderMatchScreen({
   board.className = 'placement-board match-board';
   board.style.setProperty('--board-columns', PLACEMENT_CONFIG.BOARD_COLUMNS);
   board.style.setProperty('--board-rows', PLACEMENT_CONFIG.BOARD_ROWS);
-  board.style.setProperty(
-    '--fine-grid-columns',
-    PLACEMENT_CONFIG.BOARD_COLUMNS * MATCH_RENDER_CONFIG.FINE_GRID_SCALE,
-  );
-  board.style.setProperty(
-    '--fine-grid-rows',
-    PLACEMENT_CONFIG.BOARD_ROWS * MATCH_RENDER_CONFIG.FINE_GRID_SCALE,
-  );
-  board.setAttribute('aria-label', '경기 보드');
+  board.style.setProperty('--fine-grid-columns', PLACEMENT_CONFIG.BOARD_COLUMNS * MATCH_RENDER_CONFIG.FINE_GRID_SCALE);
+  board.style.setProperty('--fine-grid-rows', PLACEMENT_CONFIG.BOARD_ROWS * MATCH_RENDER_CONFIG.FINE_GRID_SCALE);
+  board.classList.toggle('is-simulating', isSimulating);
 
-  let dragStart = null;
   let currentAimVector = aimVector;
   let powerValue;
   let powerSlider;
   let fireButton;
   let status;
-  let aimGuide;
-
-  const syncAimControls = () => {
-    const power = getAimPower(currentAimVector);
-    const magnitude = getVectorMagnitude(currentAimVector);
-    const launchVector = getLaunchVector(currentAimVector);
-    const angle = Math.atan2(launchVector.y, launchVector.x);
-
-    aimGuide.style.setProperty('--aim-length', `${Math.max(24, magnitude)}px`);
-    aimGuide.style.setProperty('--aim-angle', `${angle}rad`);
-    aimGuide.classList.toggle(
-      'is-active',
-      !isSimulating && selectedPieceId && isLaunchReady(currentAimVector),
-    );
-    powerValue.textContent = `${Math.round(power * 100)}%`;
-    powerSlider.value = String(Math.round(power * 100));
-    powerSlider.disabled = isSimulating || !selectedPieceId || magnitude === 0;
-    fireButton.disabled = isSimulating || !selectedPieceId || !isLaunchReady(currentAimVector);
-    board.classList.toggle('is-aiming', !isSimulating && Boolean(selectedPieceId));
-    status.className =
-      !isSimulating && selectedPieceId && isLaunchReady(currentAimVector)
-        ? 'validation-message is-valid'
-        : 'validation-message';
-    status.textContent = getStatusText({ selectedPieceId, aimVector: currentAimVector, isSimulating });
-  };
-
-  const syncAimFromPointer = (event) => {
-    if (!dragStart || !selectedPieceId) {
-      return;
-    }
-
-    currentAimVector = clampAimVector(
-      {
-        x: event.clientX - dragStart.x,
-        y: event.clientY - dragStart.y,
-      },
-      PHYSICS_CONFIG.MAX_DRAG_DISTANCE,
-    );
-    onAimChange(currentAimVector);
-    syncAimControls();
-  };
-
-  board.addEventListener('pointerdown', (event) => {
-    if (isSimulating || !selectedPieceId) {
-      return;
-    }
-
-    if (!event.target.closest('.match-piece.is-selected')) {
-      return;
-    }
-
-    event.preventDefault();
-    dragStart = { x: event.clientX, y: event.clientY };
-    currentAimVector = { x: 0, y: 0 };
-    board.setPointerCapture(event.pointerId);
-    board.classList.add('is-dragging');
-    onAimChange(currentAimVector);
-    syncAimControls();
+  const canvasView = createMatchCanvas({
+    board,
+    state: { activePlayerId, selectedPieceId, aimVector, playerPlacements, isSimulating, impacts },
+    onSelectPiece,
+    onFire,
+    onAimChange: (vector) => {
+      currentAimVector = vector;
+      onAimChange(vector);
+      syncControls();
+    },
   });
-  board.addEventListener('pointermove', (event) => {
-    if (dragStart) {
-      event.preventDefault();
-      syncAimFromPointer(event);
-    }
-  });
-  board.addEventListener('pointerup', () => {
-    dragStart = null;
-    board.classList.remove('is-dragging');
-  });
-  board.addEventListener('pointercancel', () => {
-    dragStart = null;
-    board.classList.remove('is-dragging');
-  });
-
-  const aimOrigin = getPieceCenterPercent(playerPlacements, selectedPieceId, PLACEMENT_CONFIG);
-  for (const ownerId of [1, 2]) {
-    for (const placement of playerPlacements[ownerId] ?? []) {
-      board.append(
-        renderMatchPiece({
-          placement,
-          selectedPieceId,
-          activePlayerId,
-          isSimulating,
-          onSelectPiece,
-        }),
-      );
-    }
-  }
-
-  aimGuide = document.createElement('div');
-  aimGuide.className = 'aim-guide';
-  aimGuide.style.setProperty('--aim-origin-x', `${aimOrigin.x}%`);
-  aimGuide.style.setProperty('--aim-origin-y', `${aimOrigin.y}%`);
-  board.append(aimGuide);
-  board.classList.toggle('is-simulating', isSimulating);
 
   const panel = document.createElement('aside');
   panel.className = 'drawing-panel placement-panel';
-  const turnLabel = createPanelLabel('현재 턴');
-  const turnValue = document.createElement('strong');
-  turnValue.className = 'ink-count';
-  turnValue.textContent = `${activePlayerId}P`;
-  const piecesLabel = createPanelLabel('말 선택');
+  panel.append(createLabel('현재 턴'));
+  const turn = document.createElement('strong');
+  turn.className = 'ink-count';
+  turn.textContent = `${activePlayerId}P`;
+  panel.append(turn, createLabel('말 선택'));
   const pieceList = document.createElement('div');
   pieceList.className = 'placement-piece-list';
-
   for (const piece of getActivePieces(playerPieces, playerPlacements, activePlayerId)) {
     const button = document.createElement('button');
     button.className = 'placement-piece-button';
@@ -187,8 +82,7 @@ export function renderMatchScreen({
     button.addEventListener('click', () => onSelectPiece(piece.id));
     pieceList.append(button);
   }
-
-  const powerLabel = createPanelLabel('발사 세기');
+  panel.append(pieceList, createLabel('발사 세기'));
   powerValue = document.createElement('strong');
   powerValue.className = 'ink-count';
   powerSlider = document.createElement('input');
@@ -198,14 +92,11 @@ export function renderMatchScreen({
   powerSlider.max = '100';
   powerSlider.step = '1';
   powerSlider.addEventListener('input', () => {
-    const magnitude = getVectorMagnitude(currentAimVector);
-    if (!selectedPieceId || magnitude === 0) {
-      return;
-    }
-
+    if (!selectedPieceId || getVectorMagnitude(currentAimVector) === 0) return;
     currentAimVector = setAimPower(currentAimVector, Number(powerSlider.value) / 100);
     onAimChange(currentAimVector);
-    syncAimControls();
+    canvasView.update({ aimVector: currentAimVector });
+    syncControls();
   });
   fireButton = document.createElement('button');
   fireButton.className = 'primary-action';
@@ -213,105 +104,42 @@ export function renderMatchScreen({
   fireButton.textContent = '발사';
   fireButton.addEventListener('click', onFire);
   status = document.createElement('p');
-  const lastResult = document.createElement('p');
-  lastResult.className =
-    lastKnockedOutPieceIds.length > 0 ? 'validation-message is-valid' : 'validation-message';
-  lastResult.textContent =
-    lastKnockedOutPieceIds.length > 0
-      ? `낙장: ${lastKnockedOutPieceIds.join(', ')}`
-      : '아직 낙장된 말이 없습니다.';
-
-  panel.append(
-    turnLabel,
-    turnValue,
-    piecesLabel,
-    pieceList,
-    powerLabel,
-    powerValue,
-    powerSlider,
-    fireButton,
-    status,
-    lastResult,
-  );
+  const result = document.createElement('p');
+  result.className = lastKnockedOutPieceIds.length ? 'validation-message is-valid' : 'validation-message';
+  result.textContent = lastKnockedOutPieceIds.length ? `낙장: ${lastKnockedOutPieceIds.join(', ')}` : '아직 낙장된 말이 없습니다.';
+  panel.append(powerValue, powerSlider, fireButton, status, result);
   layout.append(board, panel);
   screen.append(header, layout);
-  syncAimControls();
 
+  function syncControls() {
+    const power = getAimPower(currentAimVector);
+    const magnitude = getVectorMagnitude(currentAimVector);
+    powerValue.textContent = `${Math.round(power * 100)}%`;
+    powerSlider.value = String(Math.round(power * 100));
+    powerSlider.disabled = isSimulating || !selectedPieceId || magnitude === 0;
+    fireButton.disabled = isSimulating || !selectedPieceId || !isLaunchReady(currentAimVector);
+    status.className = !isSimulating && selectedPieceId && isLaunchReady(currentAimVector) ? 'validation-message is-valid' : 'validation-message';
+    status.textContent = isSimulating
+      ? '발사 결과 계산 중'
+      : !selectedPieceId
+        ? '발사할 말을 선택해 주세요.'
+        : !isLaunchReady(currentAimVector)
+          ? '선택한 말을 직접 끌어 발사 방향과 세기를 정해 주세요.'
+          : '발사 준비 완료.';
+  }
+
+  syncControls();
+  screen.updateMatch = (nextState) => {
+    currentAimVector = nextState.aimVector ?? currentAimVector;
+    canvasView.update(nextState);
+  };
+  screen.destroyMatch = () => canvasView.destroy();
   return screen;
 }
 
-function renderMatchPiece({
-  placement,
-  selectedPieceId,
-  activePlayerId,
-  isSimulating,
-  onSelectPiece,
-}) {
-  const originalCenter = getOriginalCenter(placement.occupiedCells);
-  const pose = getPlacementPose(placement);
-  const piece = document.createElement('div');
-  piece.className = 'match-piece';
-  piece.classList.toggle('is-selected', placement.pieceId === selectedPieceId);
-  piece.classList.toggle('is-active-player', placement.ownerId === activePlayerId);
-  piece.style.setProperty('--piece-ink', PLAYER_COLORS[placement.ownerId]);
-  piece.style.left = `${((originalCenter.x + pose.x + 0.5) / PLACEMENT_CONFIG.BOARD_COLUMNS) * 100}%`;
-  piece.style.top = `${((originalCenter.y + pose.y + 0.5) / PLACEMENT_CONFIG.BOARD_ROWS) * 100}%`;
-  piece.style.transform = `translate(-50%, -50%) rotate(${pose.angle}rad)`;
-  piece.setAttribute('aria-label', `${placement.ownerId}P 말`);
-
-  if (!isSimulating && placement.ownerId === activePlayerId) {
-    piece.addEventListener('pointerdown', (event) => {
-      if (placement.pieceId === selectedPieceId) {
-        return;
-      }
-
-      event.stopPropagation();
-      onSelectPiece(placement.pieceId);
-    });
-  }
-
-  for (const cell of placement.occupiedCells) {
-    const inkCell = document.createElement('span');
-    inkCell.className = 'match-ink-cell';
-    inkCell.style.left = `${(cell.x - originalCenter.x - 0.5) * 100}%`;
-    inkCell.style.top = `${(cell.y - originalCenter.y - 0.5) * 100}%`;
-    piece.append(inkCell);
-  }
-
-  return piece;
-}
-
-function createPanelLabel(text) {
+function createLabel(text) {
   const label = document.createElement('p');
   label.className = 'panel-label';
   label.textContent = text;
   return label;
-}
-
-function getOriginalCenter(cells) {
-  const total = cells.reduce(
-    (sum, cell) => ({ x: sum.x + cell.x, y: sum.y + cell.y }),
-    { x: 0, y: 0 },
-  );
-
-  return {
-    x: total.x / cells.length,
-    y: total.y / cells.length,
-  };
-}
-
-function getStatusText({ selectedPieceId, aimVector, isSimulating }) {
-  if (isSimulating) {
-    return '발사 결과 계산 중';
-  }
-
-  if (!selectedPieceId) {
-    return '발사할 말을 선택해 주세요.';
-  }
-
-  if (!isLaunchReady(aimVector)) {
-    return '보드 위에서 반대 방향으로 끌어 발사 방향과 세기를 정해 주세요.';
-  }
-
-  return '발사 준비 완료.';
 }

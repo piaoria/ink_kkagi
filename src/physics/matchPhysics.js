@@ -37,13 +37,36 @@ export function simulateLaunch({
   launchBody.applyLinearImpulse(impulse, launchBody.getWorldCenter(), true);
 
   const frames = [];
+  const impacts = [];
+  let capturedImpactCount = 0;
   const captureEvery = frameCount > 0 ? Math.max(1, Math.floor(stepCount / frameCount)) : 0;
+
+  worldState.world.on('begin-contact', (contact) => {
+    const firstBody = contact.getFixtureA().getBody();
+    const secondBody = contact.getFixtureB().getBody();
+    const firstPiece = firstBody.getUserData()?.pieceId;
+    const secondPiece = secondBody.getUserData()?.pieceId;
+
+    if (!firstPiece || !secondPiece || firstPiece === secondPiece) {
+      return;
+    }
+
+    const firstPosition = firstBody.getPosition();
+    const secondPosition = secondBody.getPosition();
+    impacts.push({
+      x: (firstPosition.x + secondPosition.x) / 2,
+      y: (firstPosition.y + secondPosition.y) / 2,
+    });
+  });
 
   for (let step = 0; step < stepCount; step += 1) {
     worldState.world.step(config.FIXED_TIME_STEP);
 
     if (captureEvery > 0 && (step + 1) % captureEvery === 0) {
-      frames.push(projectWorldToPlacements(worldState, playerPlacements, boardConfig));
+      const frame = projectWorldToPlacements(worldState, playerPlacements, boardConfig);
+      frame.impacts = impacts.slice(capturedImpactCount);
+      capturedImpactCount = impacts.length;
+      frames.push(frame);
     }
   }
 
@@ -52,6 +75,7 @@ export function simulateLaunch({
   return {
     ...result,
     frames,
+    impacts: impacts.slice(capturedImpactCount),
   };
 }
 
@@ -74,6 +98,7 @@ export function createWorldFromPlacements(playerPlacements, config = PHYSICS_CON
         linearDamping: config.LINEAR_DAMPING,
         angularDamping: config.ANGULAR_DAMPING,
       });
+      body.setUserData({ pieceId: placement.pieceId });
       const localCells = placement.occupiedCells.map((cell) => ({
         x: cell.x - centroid.x,
         y: cell.y - centroid.y,

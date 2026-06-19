@@ -42,6 +42,7 @@ export class AppController {
       simulationFrameIndex: 0,
     };
     this.simulationFrameRequest = null;
+    this.matchView = null;
   }
 
   start() {
@@ -49,6 +50,10 @@ export class AppController {
   }
 
   render() {
+    if (this.matchView) {
+      this.matchView.destroyMatch();
+      this.matchView = null;
+    }
     if (
       this.stateMachine.phase === GamePhase.DRAW_PLAYER_1 ||
       this.stateMachine.phase === GamePhase.DRAW_PLAYER_2
@@ -106,8 +111,7 @@ export class AppController {
       this.stateMachine.phase === GamePhase.AIMING ||
       this.stateMachine.phase === GamePhase.SIMULATING
     ) {
-      this.root.replaceChildren(
-        renderMatchScreen({
+      this.matchView = renderMatchScreen({
           activePlayerId: this.matchState.activePlayerId,
           selectedPieceId: this.matchState.selectedPieceId,
           aimVector: this.matchState.aimVector,
@@ -115,12 +119,13 @@ export class AppController {
           playerPieces: this.playerPieces,
           playerPlacements: this.playerPlacements,
           isSimulating: this.stateMachine.phase === GamePhase.SIMULATING,
+          impacts: this.matchState.impacts ?? [],
           onSelectPiece: (pieceId) => this.selectMatchPiece(pieceId),
           onAimChange: (vector) => this.updateAimVector(vector),
           onFire: () => this.fireSelectedPiece(),
           onBackToTitle: () => this.returnToTitle(),
-        }),
-      );
+        });
+      this.root.replaceChildren(this.matchView);
       return;
     }
 
@@ -310,6 +315,7 @@ export class AppController {
       aimVector: { x: 0, y: 0 },
       simulationFrames: simulation.frames,
       simulationFrameIndex: 0,
+      impacts: simulation.frames[0]?.impacts ?? [],
     };
     this.playerPlacements = simulation.frames[0]?.playerPlacements ?? simulation.playerPlacements;
     this.render();
@@ -329,8 +335,14 @@ export class AppController {
         this.matchState = {
           ...this.matchState,
           simulationFrameIndex: nextFrameIndex,
+          impacts: simulation.frames[nextFrameIndex].impacts ?? [],
         };
-        this.render();
+        this.matchView?.updateMatch({
+          playerPlacements: this.playerPlacements,
+          aimVector: this.matchState.aimVector,
+          isSimulating: true,
+          impacts: this.matchState.impacts,
+        });
         this.playSimulation(simulation);
       });
       return;
