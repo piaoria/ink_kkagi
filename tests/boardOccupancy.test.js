@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildBoardOccupancy, getActivePieces } from '../src/match/boardOccupancy.js';
+import {
+  buildBoardOccupancy,
+  getActivePieces,
+  getPieceCenter,
+  getPieceCenterPercent,
+} from '../src/match/boardOccupancy.js';
 
 describe('board occupancy', () => {
   it('maps placed cells to their owner and piece id', () => {
@@ -41,5 +46,30 @@ describe('board occupancy', () => {
     };
 
     expect(getActivePieces(pieces, placements, 1)).toEqual([{ id: 'p1-piece-2' }]);
+  });
+
+  it('calculates selected piece center for aim guide placement', () => {
+    const placements = {
+      1: [
+        {
+          pieceId: 'p1-piece-1',
+          ownerId: 1,
+          occupiedCells: [
+            { x: 1, y: 1 },
+            { x: 3, y: 1 },
+            { x: 2, y: 4 },
+          ],
+        },
+      ],
+      2: [],
+    };
+
+    expect(getPieceCenter(placements, 'p1-piece-1')).toEqual({ x: 2, y: 2 });
+    expect(
+      getPieceCenterPercent(placements, 'p1-piece-1', {
+        BOARD_COLUMNS: 10,
+        BOARD_ROWS: 10,
+      }),
+    ).toEqual({ x: 25, y: 25 });
   });
 });

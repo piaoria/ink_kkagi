@@ -12,6 +12,7 @@ export function simulateLaunch({
   config = PHYSICS_CONFIG,
   boardConfig = PLACEMENT_CONFIG,
   stepCount = 90,
+  frameCount = 0,
 }) {
   const worldState = createWorldFromPlacements(playerPlacements, config);
   const launchBody = worldState.bodiesByPieceId.get(selectedPieceId);
@@ -20,6 +21,7 @@ export function simulateLaunch({
     return {
       playerPlacements,
       knockedOutPieceIds: [],
+      frames: [],
     };
   }
 
@@ -31,11 +33,23 @@ export function simulateLaunch({
 
   launchBody.applyLinearImpulse(impulse, launchBody.getWorldCenter(), true);
 
+  const frames = [];
+  const captureEvery = frameCount > 0 ? Math.max(1, Math.floor(stepCount / frameCount)) : 0;
+
   for (let step = 0; step < stepCount; step += 1) {
     worldState.world.step(config.FIXED_TIME_STEP);
+
+    if (captureEvery > 0 && (step + 1) % captureEvery === 0) {
+      frames.push(projectWorldToPlacements(worldState, playerPlacements, boardConfig));
+    }
   }
 
-  return projectWorldToPlacements(worldState, playerPlacements, boardConfig);
+  const result = projectWorldToPlacements(worldState, playerPlacements, boardConfig);
+
+  return {
+    ...result,
+    frames,
+  };
 }
 
 export function createWorldFromPlacements(playerPlacements, config = PHYSICS_CONFIG) {
@@ -91,7 +105,7 @@ function projectWorldToPlacements(worldState, originalPlacements, boardConfig) {
     for (const placement of originalPlacements[ownerId] ?? []) {
       const body = worldState.bodiesByPieceId.get(placement.pieceId);
       const localCells = worldState.localCellsByPieceId.get(placement.pieceId);
-      const occupiedCells = localCells.map((localCell) => {
+      const projectedCells = localCells.map((localCell) => {
         const worldPoint = body.getWorldPoint(planck.Vec2(localCell.x, localCell.y));
 
         return {
@@ -100,14 +114,21 @@ function projectWorldToPlacements(worldState, originalPlacements, boardConfig) {
         };
       });
 
-      if (occupiedCells.every((cell) => isOutsideBoard(cell, boardConfig))) {
+      if (projectedCells.every((cell) => isOutsideBoard(cell, boardConfig))) {
         knockedOutPieceIds.push(placement.pieceId);
         continue;
       }
 
+      const occupiedCells = snapPieceToBoard({
+        placement,
+        bodyPosition: body.getPosition(),
+        boardConfig,
+      });
+
       nextPlacements[ownerId].push({
         ...placement,
-        occupiedCells: dedupeCells(occupiedCells),
+        anchor: occupiedCells[0],
+        occupiedCells,
       });
     }
   }
@@ -116,6 +137,20 @@ function projectWorldToPlacements(worldState, originalPlacements, boardConfig) {
     playerPlacements: nextPlacements,
     knockedOutPieceIds,
   };
+}
+
+export function snapPieceToBoard({ placement, bodyPosition, boardConfig = PLACEMENT_CONFIG }) {
+  const originalCenter = getCentroid(placement.occupiedCells);
+  const requestedOffset = {
+    x: Math.round(bodyPosition.x - originalCenter.x),
+    y: Math.round(bodyPosition.y - originalCenter.y),
+  };
+  const boundedOffset = clampOffsetToBoard(placement.occupiedCells, requestedOffset, boardConfig);
+
+  return placement.occupiedCells.map((cell) => ({
+    x: cell.x + boundedOffset.x,
+    y: cell.y + boundedOffset.y,
+  }));
 }
 
 function getCentroid(cells) {
@@ -133,19 +168,34 @@ function getCentroid(cells) {
   };
 }
 
-function dedupeCells(cells) {
-  const seen = new Set();
-  const deduped = [];
+function clampOffsetToBoard(cells, offset, boardConfig) {
+  const bounds = getBounds(cells);
 
-  for (const cell of cells) {
-    const key = `${cell.x},${cell.y}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      deduped.push(cell);
-    }
-  }
+  return {
+    x: clamp(offset.x, -bounds.minX, boardConfig.BOARD_COLUMNS - 1 - bounds.maxX),
+    y: clamp(offset.y, -bounds.minY, boardConfig.BOARD_ROWS - 1 - bounds.maxY),
+  };
+}
 
-  return deduped;
+function getBounds(cells) {
+  return cells.reduce(
+    (bounds, cell) => ({
+      minX: Math.min(bounds.minX, cell.x),
+      maxX: Math.max(bounds.maxX, cell.x),
+      minY: Math.min(bounds.minY, cell.y),
+      maxY: Math.max(bounds.maxY, cell.y),
+    }),
+    {
+      minX: Infinity,
+      maxX: -Infinity,
+      minY: Infinity,
+      maxY: -Infinity,
+    },
+  );
+}
+
+function clamp(value, minimum, maximum) {
+  return Math.min(Math.max(value, minimum), maximum);
 }
 
 function isOutsideBoard({ x, y }, boardConfig) {

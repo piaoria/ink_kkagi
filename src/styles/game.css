@@ -243,9 +243,11 @@
 .aim-guide {
   --aim-length: 24px;
   --aim-angle: 0rad;
+  --aim-origin-x: 50%;
+  --aim-origin-y: 50%;
   position: absolute;
-  top: 50%;
-  left: 50%;
+  top: var(--aim-origin-y);
+  left: var(--aim-origin-x);
   width: var(--aim-length);
   height: 6px;
   border: 2px solid var(--ink-black);
@@ -258,6 +260,19 @@
 
 .aim-guide.is-active {
   opacity: 1;
+}
+
+.match-board.is-simulating {
+  animation: shot-pulse 180ms steps(2) infinite;
+  pointer-events: none;
+}
+
+@keyframes shot-pulse {
+  50% {
+    box-shadow:
+      6px 6px 0 var(--pink-ink),
+      14px 14px 0 var(--ink-black);
+  }
 }
 
 .placement-board.is-readonly .placement-cell {

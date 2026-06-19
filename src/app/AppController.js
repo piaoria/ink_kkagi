@@ -38,7 +38,10 @@ export class AppController {
       aimVector: { x: 0, y: 0 },
       lastKnockedOutPieceIds: [],
       result: null,
+      simulationFrames: [],
+      simulationFrameIndex: 0,
     };
+    this.simulationTimer = null;
   }
 
   start() {
@@ -99,7 +102,10 @@ export class AppController {
       return;
     }
 
-    if (this.stateMachine.phase === GamePhase.AIMING) {
+    if (
+      this.stateMachine.phase === GamePhase.AIMING ||
+      this.stateMachine.phase === GamePhase.SIMULATING
+    ) {
       this.root.replaceChildren(
         renderMatchScreen({
           activePlayerId: this.matchState.activePlayerId,
@@ -108,6 +114,7 @@ export class AppController {
           lastKnockedOutPieceIds: this.matchState.lastKnockedOutPieceIds,
           playerPieces: this.playerPieces,
           playerPlacements: this.playerPlacements,
+          isSimulating: this.stateMachine.phase === GamePhase.SIMULATING,
           onSelectPiece: (pieceId) => this.selectMatchPiece(pieceId),
           onAimChange: (vector) => this.updateAimVector(vector),
           onFire: () => this.fireSelectedPiece(),
@@ -163,6 +170,7 @@ export class AppController {
   }
 
   returnToTitle() {
+    this.clearSimulationTimer();
     this.stateMachine.reset();
     this.drawingDrafts = {
       1: [],
@@ -182,6 +190,8 @@ export class AppController {
       aimVector: { x: 0, y: 0 },
       lastKnockedOutPieceIds: [],
       result: null,
+      simulationFrames: [],
+      simulationFrameIndex: 0,
     };
     this.render();
   }
@@ -255,6 +265,8 @@ export class AppController {
       aimVector: { x: 0, y: 0 },
       lastKnockedOutPieceIds: [],
       result: null,
+      simulationFrames: [],
+      simulationFrameIndex: 0,
     };
     this.stateMachine.transition(GamePhase.AIMING);
     this.render();
@@ -288,8 +300,50 @@ export class AppController {
       playerPlacements: this.playerPlacements,
       selectedPieceId: this.matchState.selectedPieceId,
       aimVector: this.matchState.aimVector,
+      frameCount: 10,
     });
 
+    this.matchState = {
+      ...this.matchState,
+      selectedPieceId: null,
+      aimVector: { x: 0, y: 0 },
+      simulationFrames: simulation.frames,
+      simulationFrameIndex: 0,
+    };
+    this.playerPlacements = simulation.frames[0]?.playerPlacements ?? simulation.playerPlacements;
+    this.render();
+    this.playSimulation(simulation);
+  }
+
+  playSimulation(simulation) {
+    const nextFrameIndex = this.matchState.simulationFrameIndex + 1;
+
+    if (nextFrameIndex < simulation.frames.length) {
+      this.simulationTimer = window.setTimeout(() => {
+        if (this.stateMachine.phase !== GamePhase.SIMULATING) {
+          return;
+        }
+
+        this.playerPlacements = simulation.frames[nextFrameIndex].playerPlacements;
+        this.matchState = {
+          ...this.matchState,
+          simulationFrameIndex: nextFrameIndex,
+        };
+        this.render();
+        this.playSimulation(simulation);
+      }, 70);
+      return;
+    }
+
+    this.simulationTimer = window.setTimeout(() => this.finishSimulation(simulation), 90);
+  }
+
+  finishSimulation(simulation) {
+    if (this.stateMachine.phase !== GamePhase.SIMULATING) {
+      return;
+    }
+
+    this.simulationTimer = null;
     this.playerPlacements = simulation.playerPlacements;
     const result = getMatchResult(this.playerPlacements);
     this.matchState = {
@@ -298,6 +352,8 @@ export class AppController {
       aimVector: { x: 0, y: 0 },
       lastKnockedOutPieceIds: simulation.knockedOutPieceIds,
       result,
+      simulationFrames: [],
+      simulationFrameIndex: 0,
     };
 
     if (result.finished) {
@@ -307,6 +363,13 @@ export class AppController {
     }
 
     this.render();
+  }
+
+  clearSimulationTimer() {
+    if (this.simulationTimer !== null) {
+      window.clearTimeout(this.simulationTimer);
+      this.simulationTimer = null;
+    }
   }
 
   restartQuickMatch() {

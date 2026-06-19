@@ -1,7 +1,11 @@
 import { PHYSICS_CONFIG } from '../config/physicsConfig.js';
 import { PLACEMENT_CONFIG, PLAYER_COLORS } from '../config/gameConfig.js';
 import { toCellKey } from '../drawing/drawingValidation.js';
-import { buildBoardOccupancy, getActivePieces } from '../match/boardOccupancy.js';
+import {
+  buildBoardOccupancy,
+  getActivePieces,
+  getPieceCenterPercent,
+} from '../match/boardOccupancy.js';
 import {
   clampAimVector,
   getAimPower,
@@ -18,6 +22,7 @@ import {
  *   lastKnockedOutPieceIds: string[],
  *   playerPieces: Record<1 | 2, { id: string, pixelCount: number }[]>,
  *   playerPlacements: Record<1 | 2, { pieceId: string, ownerId: 1 | 2, occupiedCells: { x: number, y: number }[] }[]>,
+ *   isSimulating?: boolean,
  *   onSelectPiece: (pieceId: string) => void,
  *   onAimChange: (vector: { x: number, y: number }) => void,
  *   onFire: () => void,
@@ -32,6 +37,7 @@ export function renderMatchScreen({
   lastKnockedOutPieceIds = [],
   playerPieces,
   playerPlacements,
+  isSimulating = false,
   onSelectPiece,
   onAimChange,
   onFire,
@@ -39,6 +45,7 @@ export function renderMatchScreen({
 }) {
   const screen = document.createElement('main');
   screen.className = 'screen drawing-screen';
+  screen.classList.toggle('is-simulating', isSimulating);
 
   const header = document.createElement('header');
   header.className = 'drawing-header';
@@ -86,16 +93,20 @@ export function renderMatchScreen({
 
     aimGuide.style.setProperty('--aim-length', `${Math.max(24, magnitude)}px`);
     aimGuide.style.setProperty('--aim-angle', `${angle}rad`);
-    aimGuide.classList.toggle('is-active', selectedPieceId && isLaunchReady(currentAimVector));
+    aimGuide.classList.toggle(
+      'is-active',
+      !isSimulating && selectedPieceId && isLaunchReady(currentAimVector),
+    );
     powerValue.textContent = `${Math.round(power * 100)}%`;
-    fireButton.disabled = !selectedPieceId || !isLaunchReady(currentAimVector);
+    fireButton.disabled = isSimulating || !selectedPieceId || !isLaunchReady(currentAimVector);
     status.className =
-      selectedPieceId && isLaunchReady(currentAimVector)
+      !isSimulating && selectedPieceId && isLaunchReady(currentAimVector)
         ? 'validation-message is-valid'
         : 'validation-message';
     status.textContent = getStatusText({
       selectedPieceId,
       aimVector: currentAimVector,
+      isSimulating,
     });
   };
 
@@ -116,7 +127,7 @@ export function renderMatchScreen({
   };
 
   board.addEventListener('pointerdown', (event) => {
-    if (!selectedPieceId) {
+    if (isSimulating || !selectedPieceId) {
       return;
     }
 
@@ -146,6 +157,7 @@ export function renderMatchScreen({
   board.addEventListener('pointercancel', endAimDrag);
 
   const occupancy = buildBoardOccupancy(playerPlacements);
+  const aimOrigin = getPieceCenterPercent(playerPlacements, selectedPieceId, PLACEMENT_CONFIG);
 
   for (let y = 0; y < PLACEMENT_CONFIG.BOARD_ROWS; y += 1) {
     for (let x = 0; x < PLACEMENT_CONFIG.BOARD_COLUMNS; x += 1) {
@@ -154,7 +166,7 @@ export function renderMatchScreen({
       const cell = document.createElement('button');
       cell.className = 'placement-cell match-cell';
       cell.type = 'button';
-      cell.disabled = !occupant || occupant.ownerId !== activePlayerId;
+      cell.disabled = isSimulating || !occupant || occupant.ownerId !== activePlayerId;
       cell.classList.toggle('is-placed', Boolean(occupant));
       cell.classList.toggle('is-active-player', occupant?.ownerId === activePlayerId);
       cell.classList.toggle('is-selected', occupant?.pieceId === selectedPieceId);
@@ -164,7 +176,7 @@ export function renderMatchScreen({
       );
       cell.setAttribute('aria-label', `${x + 1}열 ${y + 1}행`);
 
-      if (occupant?.ownerId === activePlayerId) {
+      if (!isSimulating && occupant?.ownerId === activePlayerId) {
         cell.addEventListener('click', (event) => {
           event.stopPropagation();
           onSelectPiece(occupant.pieceId);
@@ -177,7 +189,10 @@ export function renderMatchScreen({
 
   aimGuide = document.createElement('div');
   aimGuide.className = 'aim-guide';
+  aimGuide.style.setProperty('--aim-origin-x', `${aimOrigin.x}%`);
+  aimGuide.style.setProperty('--aim-origin-y', `${aimOrigin.y}%`);
   board.append(aimGuide);
+  board.classList.toggle('is-simulating', isSimulating);
 
   const panel = document.createElement('aside');
   panel.className = 'drawing-panel placement-panel';
@@ -202,6 +217,7 @@ export function renderMatchScreen({
     button.className = 'placement-piece-button';
     button.classList.toggle('is-active', piece.id === selectedPieceId);
     button.type = 'button';
+    button.disabled = isSimulating;
     button.textContent = `${piece.id.split('-').at(-1)}번 ${piece.pixelCount}칸`;
     button.addEventListener('click', () => onSelectPiece(piece.id));
     pieceList.append(button);
@@ -251,7 +267,11 @@ export function renderMatchScreen({
   return screen;
 }
 
-function getStatusText({ selectedPieceId, aimVector }) {
+function getStatusText({ selectedPieceId, aimVector, isSimulating }) {
+  if (isSimulating) {
+    return 'SHOT IN MOTION';
+  }
+
   if (!selectedPieceId) {
     return '발사할 말을 선택해 주세요.';
   }
