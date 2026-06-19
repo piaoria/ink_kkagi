@@ -1,10 +1,10 @@
 import { DRAWING_CONFIG, GAME_INFO } from '../config/gameConfig.js';
 
 /**
- * @param {{ onStartLocal: () => void }} params
+ * @param {{ onStartLocal: () => void, onStartQuick: () => void }} params
  * @returns {HTMLElement}
  */
-export function renderMainScreen({ onStartLocal }) {
+export function renderMainScreen({ onStartLocal, onStartQuick }) {
   const screen = document.createElement('main');
   screen.className = 'screen title-screen';
 
@@ -27,7 +27,7 @@ export function renderMainScreen({ onStartLocal }) {
   const tags = document.createElement('ul');
   tags.className = 'concept-tags';
 
-  for (const label of ['픽셀 말 제작', '실제 빈 공간', '물리 튕기기']) {
+  for (const label of ['픽셀 말 제작', '빈 공간 충돌', '로컬 1:1 승부']) {
     const tag = document.createElement('li');
     tag.textContent = label;
     tags.append(tag);
@@ -36,17 +36,23 @@ export function renderMainScreen({ onStartLocal }) {
   const actions = document.createElement('div');
   actions.className = 'title-actions';
 
-  const startButton = document.createElement('button');
-  startButton.className = 'primary-action';
-  startButton.type = 'button';
-  startButton.textContent = '로컬 대전';
-  startButton.addEventListener('click', onStartLocal);
+  const quickStartButton = document.createElement('button');
+  quickStartButton.className = 'primary-action';
+  quickStartButton.type = 'button';
+  quickStartButton.textContent = '빠른 시작';
+  quickStartButton.addEventListener('click', onStartQuick);
+
+  const customStartButton = document.createElement('button');
+  customStartButton.className = 'secondary-action';
+  customStartButton.type = 'button';
+  customStartButton.textContent = '직접 제작';
+  customStartButton.addEventListener('click', onStartLocal);
 
   const status = document.createElement('p');
   status.className = 'phase-status';
   status.textContent = `${DRAWING_CONFIG.PIECES_PER_PLAYER}개 말, ${DRAWING_CONFIG.TOTAL_INK}칸 잉크`;
 
-  actions.append(startButton, status);
+  actions.append(quickStartButton, customStartButton, status);
   copy.append(logo, title, subtitle, tags, actions);
 
   const preview = renderBoardPreview();

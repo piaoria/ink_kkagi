@@ -84,11 +84,11 @@ export function validatePieceDraft({
   }
 
   if (!areCellsInsideGrid(normalized, config)) {
-    errors.push('픽셀이 제작 그리드 밖에 있습니다.');
+    errors.push('칸이 제작 그리드 밖에 있습니다.');
   }
 
   if (!areCellsOrthogonallyConnected(normalized)) {
-    errors.push('모든 픽셀은 상하좌우로 연결되어야 합니다.');
+    errors.push('모든 칸은 상하좌우로 연결되어야 합니다.');
   }
 
   if (isLastPiece && currentInk !== remainingInkBeforeConfirm) {

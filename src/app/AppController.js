@@ -3,6 +3,7 @@ import { PLAYER_COLORS } from '../config/gameConfig.js';
 import { renderDrawingScreen } from '../screens/DrawingScreen.js';
 import { renderMainScreen } from '../screens/MainScreen.js';
 import { renderMatchReadyScreen, renderPlacementScreen } from '../screens/PlacementScreen.js';
+import { createAutoPlacementsForPlayer, createQuickMatchSetup } from '../setup/quickSetup.js';
 
 export class AppController {
   /**
@@ -67,6 +68,7 @@ export class AppController {
           pieces: this.playerPieces[ownerId],
           placements: this.playerPlacements[ownerId],
           onConfirmPlacement: (placement) => this.confirmPlacement(ownerId, placement),
+          onAutoPlace: () => this.autoPlacePlayer(ownerId),
           onClearPlacements: () => this.clearPlacements(ownerId),
           onBack: () => this.returnToTitle(),
         }),
@@ -88,6 +90,7 @@ export class AppController {
     this.root.replaceChildren(
       renderMainScreen({
         onStartLocal: () => this.startLocalMatchSetup(),
+        onStartQuick: () => this.startQuickLocalMatchSetup(),
       }),
     );
   }
@@ -97,6 +100,23 @@ export class AppController {
       this.stateMachine.transition(GamePhase.DRAW_PLAYER_1);
     }
 
+    this.render();
+  }
+
+  startQuickLocalMatchSetup() {
+    if (this.stateMachine.phase !== GamePhase.TITLE) {
+      return;
+    }
+
+    const { playerPieces, playerPlacements } = createQuickMatchSetup();
+    this.playerPieces = playerPieces;
+    this.playerPlacements = playerPlacements;
+
+    this.stateMachine.transition(GamePhase.DRAW_PLAYER_1);
+    this.stateMachine.transition(GamePhase.DRAW_PLAYER_2);
+    this.stateMachine.transition(GamePhase.PLACE_PLAYER_1);
+    this.stateMachine.transition(GamePhase.PLACE_PLAYER_2);
+    this.stateMachine.transition(GamePhase.READY);
     this.render();
   }
 
@@ -157,6 +177,21 @@ export class AppController {
 
   clearPlacements(ownerId) {
     this.playerPlacements[ownerId] = [];
+    this.render();
+  }
+
+  autoPlacePlayer(ownerId) {
+    this.playerPlacements[ownerId] = createAutoPlacementsForPlayer({
+      ownerId,
+      pieces: this.playerPieces[ownerId],
+    });
+
+    if (ownerId === 1) {
+      this.stateMachine.transition(GamePhase.PLACE_PLAYER_2);
+    } else {
+      this.stateMachine.transition(GamePhase.READY);
+    }
+
     this.render();
   }
 }

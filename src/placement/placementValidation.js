@@ -102,11 +102,11 @@ function getBounds(cells) {
   }
 
   return cells.reduce(
-    (bounds, cell) => ({
-      minX: Math.min(bounds.minX, cell.x),
-      maxX: Math.max(bounds.maxX, cell.x),
-      minY: Math.min(bounds.minY, cell.y),
-      maxY: Math.max(bounds.maxY, cell.y),
+    (currentBounds, cell) => ({
+      minX: Math.min(currentBounds.minX, cell.x),
+      maxX: Math.max(currentBounds.maxX, cell.x),
+      minY: Math.min(currentBounds.minY, cell.y),
+      maxY: Math.max(currentBounds.maxY, cell.y),
     }),
     {
       minX: Number.POSITIVE_INFINITY,

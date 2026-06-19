@@ -13,6 +13,7 @@ import {
  *   pieces: { id: string, cells: { x: number, y: number }[], pixelCount: number, color: string }[],
  *   placements: { pieceId: string, ownerId: 1 | 2, anchor: { x: number, y: number }, rotation: number, occupiedCells: { x: number, y: number }[] }[],
  *   onConfirmPlacement: (placement: { pieceId: string, ownerId: 1 | 2, anchor: { x: number, y: number }, rotation: number, occupiedCells: { x: number, y: number }[] }) => void,
+ *   onAutoPlace: () => void,
  *   onClearPlacements: () => void,
  *   onBack: () => void,
  * }} params
@@ -23,6 +24,7 @@ export function renderPlacementScreen({
   pieces,
   placements,
   onConfirmPlacement,
+  onAutoPlace,
   onClearPlacements,
   onBack,
 }) {
@@ -64,7 +66,7 @@ export function renderPlacementScreen({
   const panel = document.createElement('aside');
   panel.className = 'drawing-panel placement-panel';
 
-  const placedPieceIds = new Set(placements.map((placement) => placement.pieceId));
+  let placedPieceIds = new Set(placements.map((placement) => placement.pieceId));
   let selectedPiece = pieces.find((piece) => !placedPieceIds.has(piece.id)) ?? pieces[0] ?? null;
   let selectedAnchor = null;
   let rotation = 0;
@@ -87,6 +89,12 @@ export function renderPlacementScreen({
   confirmButton.className = 'primary-action';
   confirmButton.type = 'button';
 
+  const autoPlaceButton = document.createElement('button');
+  autoPlaceButton.className = 'primary-action';
+  autoPlaceButton.type = 'button';
+  autoPlaceButton.textContent = '자동 배치';
+  autoPlaceButton.addEventListener('click', onAutoPlace);
+
   const resetButton = document.createElement('button');
   resetButton.className = 'secondary-action';
   resetButton.type = 'button';
@@ -94,6 +102,7 @@ export function renderPlacementScreen({
   resetButton.addEventListener('click', onClearPlacements);
 
   const syncBoard = () => {
+    placedPieceIds = new Set(placements.map((placement) => placement.pieceId));
     const placedCells = new Map();
     for (const placement of placements) {
       for (const cell of placement.occupiedCells) {
@@ -123,7 +132,10 @@ export function renderPlacementScreen({
       cell.classList.toggle('is-home', isHomeRow(Number(cell.dataset.y), ownerId));
       cell.classList.toggle('is-placed', Boolean(placedOwner));
       cell.classList.toggle('is-preview', previewCells.has(key));
-      cell.style.setProperty('--cell-ink', placedOwner ? PLAYER_COLORS[placedOwner] : PLAYER_COLORS[ownerId]);
+      cell.style.setProperty(
+        '--cell-ink',
+        placedOwner ? PLAYER_COLORS[placedOwner] : PLAYER_COLORS[ownerId],
+      );
     }
 
     validationMessage.textContent = validation.valid
@@ -134,7 +146,7 @@ export function renderPlacementScreen({
     confirmButton.textContent = isPlayerPlacementComplete(pieces, placements)
       ? '배치 완료'
       : '이 위치에 배치';
-    rotationButton.textContent = `회전 ${rotation}°`;
+    rotationButton.textContent = `회전 ${rotation}도`;
   };
 
   const syncPieces = () => {
@@ -215,7 +227,15 @@ export function renderPlacementScreen({
     });
   });
 
-  panel.append(progress, pieceList, rotationButton, validationMessage, resetButton, confirmButton);
+  panel.append(
+    progress,
+    pieceList,
+    rotationButton,
+    validationMessage,
+    autoPlaceButton,
+    resetButton,
+    confirmButton,
+  );
   layout.append(board, panel);
   screen.append(header, layout);
 

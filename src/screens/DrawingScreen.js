@@ -59,7 +59,7 @@ export function renderDrawingScreen({
   const grid = document.createElement('div');
   grid.className = 'drawing-grid';
   grid.style.setProperty('--player-ink', PLAYER_COLORS[ownerId]);
-  grid.setAttribute('aria-label', '8x8 픽셀 말 제작 그리드');
+  grid.setAttribute('aria-label', '8x8 말 제작 그리드');
 
   const cellMap = new Map();
   let cells = normalizeCells(draftCells);
@@ -319,79 +319,10 @@ export function renderDrawingScreen({
   return screen;
 }
 
-/**
- * @param {{
- *   playerPieces: Record<1 | 2, { id: string, pixelCount: number }[]>,
- *   onBackToTitle: () => void,
- * }} params
- * @returns {HTMLElement}
- */
-export function renderDrawingCompleteScreen({ playerPieces, onBackToTitle }) {
-  const screen = document.createElement('main');
-  screen.className = 'screen drawing-screen';
-
-  const header = document.createElement('header');
-  header.className = 'drawing-header';
-
-  const titleGroup = document.createElement('div');
-
-  const eyebrow = document.createElement('p');
-  eyebrow.className = 'screen-eyebrow';
-  eyebrow.textContent = 'LOCAL 1:1';
-
-  const title = document.createElement('h1');
-  title.className = 'pixel-title';
-  title.textContent = '제작 완료';
-
-  titleGroup.append(eyebrow, title);
-
-  const backButton = document.createElement('button');
-  backButton.className = 'secondary-action';
-  backButton.type = 'button';
-  backButton.textContent = '메인';
-  backButton.addEventListener('click', onBackToTitle);
-
-  header.append(titleGroup, backButton);
-
-  const summary = document.createElement('section');
-  summary.className = 'drawing-complete-layout';
-
-  for (const ownerId of [1, 2]) {
-    const panel = document.createElement('article');
-    panel.className = 'drawing-panel';
-    panel.style.setProperty('--player-ink', PLAYER_COLORS[ownerId]);
-
-    const label = document.createElement('p');
-    label.className = 'panel-label';
-    label.textContent = `PLAYER ${ownerId}`;
-
-    const total = playerPieces[ownerId].reduce((sum, piece) => sum + piece.pixelCount, 0);
-    const totalText = document.createElement('strong');
-    totalText.className = 'ink-count';
-    totalText.textContent = `${total}칸`;
-
-    const list = document.createElement('div');
-    list.className = 'pieces-list';
-
-    for (const piece of playerPieces[ownerId]) {
-      const item = document.createElement('span');
-      item.className = 'piece-chip';
-      item.textContent = `${piece.id.split('-').at(-1)}번 ${piece.pixelCount}칸`;
-      list.append(item);
-    }
-
-    panel.append(label, totalText, list);
-    summary.append(panel);
-  }
-
-  screen.append(header, summary);
-  return screen;
-}
-
 function getConfirmButtonLabel({ ownerId, remainingPiecesAfterConfirm }) {
   if (remainingPiecesAfterConfirm > 0) {
     return '이 말 확정';
   }
 
-  return ownerId === 1 ? '2P 제작으로' : '제작 완료';
+  return ownerId === 1 ? '2P 제작으로' : '배치로 이동';
 }

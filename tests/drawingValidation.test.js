@@ -46,7 +46,7 @@ describe('piece drawing rules', () => {
     });
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('모든 픽셀은 상하좌우로 연결되어야 합니다.');
+    expect(result.errors).toContain('모든 칸은 상하좌우로 연결되어야 합니다.');
   });
 
   it('rejects cells outside the drawing grid', () => {
@@ -56,7 +56,7 @@ describe('piece drawing rules', () => {
     });
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('픽셀이 제작 그리드 밖에 있습니다.');
+    expect(result.errors).toContain('칸이 제작 그리드 밖에 있습니다.');
   });
 
   it('interpolates fast diagonal drags into orthogonal steps', () => {
